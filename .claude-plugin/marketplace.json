@@ -1,5 +1,5 @@
 {
-  "name": "paulcodes-marketplace",
+  "name": "paulcodes-claude-marketplace",
   "owner": { "name": "Paul Parker", "email": "airete@gmail.com" },
   "metadata": { "description": "Personal Claude Code plugin marketplace — workflows, tools, and automation", "version": "1.0.0" },
   "plugins": [
