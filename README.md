@@ -1,11 +1,11 @@
-# claude-marketplace
+# marketplace
 
 Personal Claude Code plugin marketplace. Install once, get all the plugins.
 
 ## Quick install
 
 ```bash
-claude plugin marketplace add paulCodes/claude-marketplace
+claude plugin marketplace add paulCodes/marketplace
 claude plugin install tab-workflow
 ```
 
@@ -29,6 +29,6 @@ The tab-workflow plugin is built on [Tab for Projects](https://github.com/4lt7ab
 Clone the repo and copy the command files into your editor's configuration:
 
 ```bash
-git clone git@github.com:paulCodes/claude-marketplace.git
+git clone git@github.com:paulCodes/marketplace.git
 # Copy plugins/tab/commands/*.md into your editor's command directory
 ```
