@@ -6,19 +6,19 @@ Personal Claude Code plugin marketplace. Install once, get all the plugins.
 
 ```bash
 claude plugin marketplace add paulCodes/claude-marketplace
-claude plugin install tab
+claude plugin install tab-workflow
 ```
 
 ## Plugins
 
 | Plugin | Commands | Description |
 |--------|----------|-------------|
-| **tab** | `/tab-brainstorming`, `/tab-refinement`, `/tab-work`, `/tab-verify`, `/tab-feedback`, `/listen` | Tab for Projects workflow — brainstorm, refine, implement, verify, feedback. Includes planner, QA, and documenter agents. |
+| **tab-workflow** | `/tab-brainstorming`, `/tab-refinement`, `/tab-work`, `/tab-verify`, `/tab-feedback`, `/listen` | Tab for Projects workflow — brainstorm, refine, implement, verify, feedback. Includes planner, QA, and documenter agents. |
 
 More plugins coming soon.
 
 See each plugin's README for full documentation:
-- [Tab plugin](plugins/tab/README.md)
+- [tab-workflow](plugins/tab/README.md)
 
 ## For Cursor / Copilot users
 
