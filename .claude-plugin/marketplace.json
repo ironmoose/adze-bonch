@@ -4,7 +4,7 @@
   "metadata": { "description": "Personal Claude Code plugin marketplace — workflows, tools, and automation", "version": "1.0.0" },
   "plugins": [
     {
-      "name": "tab",
+      "name": "tab-workflow",
       "source": "./plugins/tab",
       "description": "Tab for Projects workflow — brainstorm ideas into designs, implement with sub-agents, verify code health, and collect feedback.",
       "version": "1.0.0"
