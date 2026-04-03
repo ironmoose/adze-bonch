@@ -7,7 +7,7 @@
       "name": "tab-workflow",
       "source": "./plugins/tab",
       "description": "Tab for Projects workflow — brainstorm ideas into designs, implement with sub-agents, verify code health, and collect feedback.",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }
