@@ -37,9 +37,10 @@ Built on [Tab for Projects](https://github.com/4lt7ab/Tab) by [@4lt7ab](https://
 
 ## For Cursor / Copilot Users
 
-Clone the repo and copy the command files into your editor's configuration:
+The command `.md` files are portable to other editors. Agents and rules are Claude Code-specific.
 
 ```bash
 git clone git@github.com:paulCodes/marketplace.git
 # Copy plugins/tab/commands/*.md into your editor's command directory
+# Note: Full functionality (agents, rules, sub-agent dispatch) requires Claude Code
 ```
