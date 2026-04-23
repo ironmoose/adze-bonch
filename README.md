@@ -6,7 +6,7 @@ Personal Claude Code plugin marketplace. Install the marketplace once, then pick
 
 | Plugin | Command | What it does |
 |--------|---------|--------------|
-| **[tab-workflow](plugins/tab/README.md)** | `/tab` | Project lifecycle manager built on [Tab for Projects](https://github.com/4lt7ab/Tab). Brainstorm, refine, implement, verify, and track progress. All state persists to Tab, so crashed sessions pick up where they left off. |
+| **[tab-workflow](plugins/tab/README.md)** | `/tab` | Project lifecycle manager built on [Tab for Projects](https://github.com/4lt7ab/Tab). Brainstorm, refine, implement, verify, review PRs, and track progress with multi-agent quality gates. All state persists to Tab, so crashed sessions pick up where they left off. |
 
 ## Install
 
@@ -19,6 +19,13 @@ claude plugin install tab-workflow
 ```
 
 tab-workflow requires a running [Tab for Projects](https://github.com/4lt7ab/Tab) MCP server.
+
+## What's New in v2.0
+
+- **PR Reviews** (`/tab-pr-review`): Multi-agent review pipeline with 5-7 parallel specialist agents (edge case QA, acceptance QA, code smells, test review, and more). Walks through findings one at a time with voice-controlled comment posting. Supports dashboard mode, backport detection, and review state persistence.
+- **Quality Gates**: Commit gate checks that all review findings, verification failures, and tasks are resolved before allowing a commit.
+- **Workflow Routing**: The `/tab` router now detects PR review intent and dispatches to the appropriate pipeline alongside brainstorm, refine, implement, and verify flows.
+- **Tab Integration for Reviews**: When a Tab project exists for the PR being reviewed, acceptance criteria from Tab tasks inform the review agents.
 
 ## Update
 
