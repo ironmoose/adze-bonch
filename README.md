@@ -1,46 +1,44 @@
 # paulCodes Marketplace
 
-Personal Claude Code plugin marketplace. Install once, get all the plugins.
-
-## Quick Install
-
-```bash
-claude plugin marketplace add paulCodes/marketplace
-claude plugin install tab-workflow
-```
+Personal Claude Code plugin marketplace. Install the marketplace once, then pick the plugins you want.
 
 ## Plugins
 
-| Plugin | Entry Point | Description |
-|--------|-------------|-------------|
-| **tab-workflow** | `/tab` | Tab for Projects workflow — one command to brainstorm, refine, implement, verify, and save. Always Tab-first. |
+| Plugin | Command | What it does |
+|--------|---------|--------------|
+| **[tab-workflow](plugins/tab/README.md)** | `/tab` | Project lifecycle manager built on [Tab for Projects](https://github.com/4lt7ab/Tab). Brainstorm, refine, implement, verify, and track progress. All state persists to Tab, so crashed sessions pick up where they left off. |
 
-See the [tab-workflow README](plugins/tab/README.md) for full documentation.
+## Install
 
-## How It Works
+```bash
+# Add the marketplace
+claude plugin marketplace add paulCodes/marketplace
 
-The tab-workflow plugin turns [Tab for Projects](https://github.com/4lt7ab/Tab) into a complete project lifecycle manager for Claude Code. You say `/tab` and the system figures out what you need:
-
-```
-/tab I want to build a CLI tool     → brainstorm flow
-/tab work on doot                   → implementation flow
-/tab verify                         → lint/test/fix loop
-/tab save                           → save progress to Tab
-/tab                                → show project status
+# Install a plugin
+claude plugin install tab-workflow
 ```
 
-Everything is persisted to Tab — projects, tasks, KB documents, session progress logs. If your session crashes, Tab has the full state to resume from.
+tab-workflow requires a running [Tab for Projects](https://github.com/4lt7ab/Tab) MCP server.
 
-## Credits
+## Update
 
-Built on [Tab for Projects](https://github.com/4lt7ab/Tab) by [@4lt7ab](https://github.com/4lt7ab). Tab provides the MCP server and project management primitives — this plugin adds workflow automation on top.
+```bash
+# Pull latest plugin versions
+claude plugin marketplace update paulCodes-marketplace
 
-## For Cursor / Copilot Users
+# Update a specific plugin
+claude plugin update tab-workflow
+```
 
-The command `.md` files are portable to other editors. Agents and rules are Claude Code-specific.
+## For other editors
+
+The command `.md` files are portable. Agents and rules are Claude Code-specific.
 
 ```bash
 git clone git@github.com:paulCodes/marketplace.git
 # Copy plugins/tab/commands/*.md into your editor's command directory
-# Note: Full functionality (agents, rules, sub-agent dispatch) requires Claude Code
 ```
+
+## Credits
+
+Built on [Tab for Projects](https://github.com/4lt7ab/Tab) by [@4lt7ab](https://github.com/4lt7ab).
