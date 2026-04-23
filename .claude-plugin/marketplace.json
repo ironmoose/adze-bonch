@@ -7,6 +7,14 @@
         "repo": "paulCodes/marketplace",
         "path": "plugins/tab"
       }
+    },
+    {
+      "name": "code-review",
+      "source": {
+        "source": "github",
+        "repo": "paulCodes/marketplace",
+        "path": "plugins/code-review"
+      }
     }
   ]
 }
