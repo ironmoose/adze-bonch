@@ -1,13 +1,12 @@
 {
-  "name": "paulCodes-marketplace",
-  "owner": { "name": "Paul Parker", "email": "airete@gmail.com" },
-  "metadata": { "description": "Personal Claude Code plugin marketplace — workflows, tools, and automation", "version": "2.0.0" },
   "plugins": [
     {
       "name": "tab-workflow",
-      "source": "./plugins/tab",
-      "description": "Tab for Projects workflow — brainstorm, refine, implement, verify, and review PRs with multi-agent quality gates. All state persists to Tab for crash recovery.",
-      "version": "2.0.0"
+      "source": {
+        "source": "github",
+        "repo": "paulCodes/marketplace",
+        "path": "plugins/tab"
+      }
     }
   ]
 }
