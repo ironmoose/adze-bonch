@@ -1,0 +1,10 @@
+{
+  "name": "pr-review",
+  "version": "1.0.0",
+  "description": "Multi-agent PR review with voice-controlled comment posting. Specialized parallel agents review code, findings are walked through one at a time, and comments sound human.",
+  "author": {
+    "name": "Paul Parker"
+  },
+  "repository": "https://github.com/paulCodes/marketplace",
+  "license": "MIT"
+}

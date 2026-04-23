@@ -9,11 +9,11 @@
       }
     },
     {
-      "name": "code-review",
+      "name": "pr-review",
       "source": {
         "source": "github",
         "repo": "paulCodes/marketplace",
-        "path": "plugins/code-review"
+        "path": "plugins/pr-review"
       }
     }
   ]
