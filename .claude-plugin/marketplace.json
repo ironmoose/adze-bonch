@@ -1,5 +1,5 @@
 {
-  "name": "paulCodes-marketplace",
+  "name": "ironmoose-marketplace",
   "owner": { "name": "Paul Parker" },
   "metadata": {
     "description": "Claude Code plugin marketplace. Ships tab-workflow and pr-review.",

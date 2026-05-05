@@ -44,8 +44,8 @@ Comments read like a teammate wrote them, not a bot.
 ## Install
 
 ```
-/plugin marketplace add paulCodes/marketplace
-/plugin install pr-review@paulCodes-marketplace
+/plugin marketplace add ironmoose/marketplace
+/plugin install pr-review@ironmoose-marketplace
 ```
 
 ## Usage
@@ -68,4 +68,4 @@ The more context available, the stronger the Acceptance QA agent's verification.
 
 ## Credits
 
-By Paul Parker. Part of the [paulCodes/marketplace](https://github.com/paulCodes/marketplace) plugin collection.
+By Paul Parker. Part of the [ironmoose/marketplace](https://github.com/ironmoose/marketplace) plugin collection.

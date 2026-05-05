@@ -1,4 +1,4 @@
-# paulCodes Marketplace
+# ironmoose Marketplace
 
 Personal Claude Code plugin marketplace. Install the marketplace once, then pick the plugins you want.
 
@@ -13,10 +13,10 @@ Personal Claude Code plugin marketplace. Install the marketplace once, then pick
 
 ```
 # Add the marketplace
-/plugin marketplace add paulCodes/marketplace
+/plugin marketplace add ironmoose/marketplace
 
 # Install a plugin
-/plugin install tab-workflow@paulCodes-marketplace
+/plugin install tab-workflow@ironmoose-marketplace
 ```
 
 tab-workflow requires a running [Tab for Projects](https://github.com/4lt7ab/Tab) MCP server.
@@ -31,10 +31,10 @@ tab-workflow requires a running [Tab for Projects](https://github.com/4lt7ab/Tab
 
 ```
 # Pull latest plugin versions
-/plugin marketplace update paulCodes-marketplace
+/plugin marketplace update ironmoose-marketplace
 
 # Update a specific plugin
-/plugin update tab-workflow@paulCodes-marketplace
+/plugin update tab-workflow@ironmoose-marketplace
 ```
 
 ## For other editors
@@ -42,7 +42,7 @@ tab-workflow requires a running [Tab for Projects](https://github.com/4lt7ab/Tab
 The command `.md` files are portable. Agents and rules are Claude Code-specific.
 
 ```bash
-git clone git@github.com:paulCodes/marketplace.git
+git clone git@github.com:ironmoose/marketplace.git
 # Copy plugins/tab/commands/*.md into your editor's command directory
 ```
 
