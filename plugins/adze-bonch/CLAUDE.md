@@ -15,7 +15,7 @@ This file is loaded by Claude Code on session start in `~/workspaces/marketplace
 | Language conventions overlays | `reference/typescript-conventions.md`, `reference/python-conventions.md` |
 | Skills | `skills/<name>/SKILL.md` |
 | Deployed cache (do NOT edit) | `~/.claude/plugins/cache/ironmoose-marketplace/adze-bonch/<version>/` |
-| Marketplace remote | `git@github.com:ironmoose/marketplace.git` |
+| Marketplace remote | `git@github.com:ironmoose/adze-bonch.git` |
 | Adze repo (maintainer: Jacob @4lt7ab) | `~/workspaces/adze` |
 | Design Decisions Log (D1..D18) | adze doc `01KR883C2A54R2MNX720MF34DN` |
 | Meta-project ("Adze Workflow") | adze project `01KR7FQQCM37MFDTDG9N8N4JHR` |
@@ -64,7 +64,7 @@ The setup wizard is the **7-step flow locked in D14** (D17 dropped the original 
 - **Step 4d.5** Confirm-fix. The repro-verifier re-runs each Confirmed finding's OWN repro against the fixed code, and it must now PASS. MANDATORY on every workflow, no skip conditions. The repo's own test suite going green is not sufficient: those tests did not catch the defect in the first place, which is why the repro exists. A fix whose repro still fails is not a fix and goes back to 4d, and a finding whose repro was never re-run does not reach the commit gate. Added after a 2026-08-25 failure where a Confirmed finding was "fixed" by moving a call site and adding a comment, the repro was never re-run, the green suite and a reviewer both passed it, and the defect survived.
 - **Step 4e** Promote regression tests. For every Confirmed-and-fixed finding, the test-writer (promote mode) translates its repro into a permanent regression test in the target repo, or explicitly declines with a reason. MANDATORY decision on every workflow, no skip conditions on making the call.
 - **Step 5** Commit gate, which checks the Step 2 Done-condition.
-- **Step 6** PR handoff to the `pr-review` plugin.
+- **Step 6** PR handoff for review.
 
 **Fix-cycle budget:** max 3 per failure, plus a soft cross-loop total of roughly 8 across Steps 4a, 4b, and 4d. Past that, stop and reassess with the user.
 

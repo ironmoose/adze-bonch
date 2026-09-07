@@ -21,7 +21,7 @@ Everything below is the reference: setup, the lookup chain, the pipeline, and th
 - **A bootstrap wizard.** `/adze-bonch:setup` creates two adze projects ("adze-bonch reference" and "adze-bonch user profiles"), seeds canonical reference docs, creates your user profile, and optionally installs a SessionStart hook.
 - **A read-only status check.** `/adze-bonch:status` for a cheap "where am I?" snapshot.
 - **A router.** `/adze-bonch:main` resolves the active project, applies the lookup chain, and routes intent.
-- **A tackle orchestrator.** `/adze-bonch:tackle` runs the full task lifecycle: load discipline, resolve task, scrum-master routes, researcher builds context, plan is written interactively and stored in adze, failing tests are written first (TDD is the default), the implementer takes them green on a branch, a parallel quality gate runs 7 reviewers, a mandatory repro-verify step proves or refutes each finding, fix cycles clear the confirmed ones, a mandatory confirm-fix step re-runs each confirmed finding's own repro against the fixed code, the test-writer promotes those repros into permanent regression tests, and the commit gate hands off to `pr-review`.
+- **A tackle orchestrator.** `/adze-bonch:tackle` runs the full task lifecycle: load discipline, resolve task, scrum-master routes, researcher builds context, plan is written interactively and stored in adze, failing tests are written first (TDD is the default), the implementer takes them green on a branch, a parallel quality gate runs 7 reviewers, a mandatory repro-verify step proves or refutes each finding, fix cycles clear the confirmed ones, a mandatory confirm-fix step re-runs each confirmed finding's own repro against the fixed code, the test-writer promotes those repros into permanent regression tests, and the commit gate hands off for PR review.
 - **Skills.** Reusable playbooks that load on demand: `subagent-edit-verification` (check what an editing agent actually did before committing) and `interview-prep-sheet-rehearsal-audit` (repair a prep document by rehearsing it out loud).
 
 ## What this plugin is NOT (yet)
@@ -35,7 +35,7 @@ Everything below is the reference: setup, the lookup chain, the pipeline, and th
 ### Install
 
 ```
-/plugin marketplace add ironmoose/marketplace
+/plugin marketplace add ironmoose/adze-bonch
 /plugin install adze-bonch@ironmoose-marketplace
 ```
 
@@ -115,7 +115,7 @@ First hit wins. Per-project overrides live in `project.context` as a fenced `wor
 | `/adze-bonch:setup` | First-time setup wizard. Idempotent. 7-step flow (D14/D17) plus an optional Step 6.5 (quality-gate enforcement hook). |
 | `/adze-bonch:status` | Read-only project snapshot. Never writes. |
 | `/adze-bonch:save` | Synchronous decision capture. The "save our work" hammer. |
-| `/adze-bonch:tackle` | Full task lifecycle orchestrator. Research, plan, implement, test, quality gate, and PR handoff via `pr-review`. |
+| `/adze-bonch:tackle` | Full task lifecycle orchestrator. Research, plan, implement, test, quality gate, and PR handoff for review. |
 
 ## Tackle lifecycle and agents
 
@@ -133,7 +133,7 @@ First hit wins. Per-project overrides live in `project.context` as a fenced `wor
 10. **Fix cycles** clear the Confirmed findings. Proven-safe false positives are dropped rather than chased. Max 3 cycles per failure, with a soft total of roughly 8 across implement, test, and fix.
 11. **Confirm-fix** (mandatory, no skip conditions). The repro-verifier re-runs each Confirmed finding's OWN repro against the fixed code, and it must now pass. The repo's own suite going green is not sufficient: those tests did not catch the defect in the first place, which is why the repro exists. A fix whose repro still fails goes back to the fix step.
 12. **Promote regression tests** (mandatory decision, no skip conditions). For every Confirmed-and-fixed finding, the test-writer translates its repro into a permanent regression test in the target repo, keeping the trigger exactly and rewriting the assertion to the now-correct behavior, or explicitly declines with a reason.
-13. **Commit gate** (which checks the Done-condition) and PR handoff to the `pr-review` plugin.
+13. **Commit gate** (which checks the Done-condition) and PR handoff for review.
 
 ### Agents (12 in the tackle lifecycle)
 
@@ -244,4 +244,4 @@ The 18 decisions behind adze-bonch live in adze as document `01KR883C2A54R2MNX72
 
 ## Credits
 
-Built on [adze](https://github.com/4lt7ab/adze) by [@4lt7ab](https://github.com/4lt7ab). Sister plugin `pr-review` ships in the same marketplace.
+Built on [adze](https://github.com/4lt7ab/adze) by [@4lt7ab](https://github.com/4lt7ab).
