@@ -2,16 +2,10 @@
   "name": "ironmoose-marketplace",
   "owner": { "name": "Paul Parker" },
   "metadata": {
-    "description": "Claude Code plugin marketplace. Ships pr-review and adze-bonch.",
-    "version": "2.4.0"
+    "description": "Home of the adze-bonch plugin: workflow discipline for adze projects.",
+    "version": "3.0.0"
   },
   "plugins": [
-    {
-      "name": "pr-review",
-      "source": "./plugins/pr-review",
-      "description": "Multi-agent PR review with voice-controlled comment posting. Optional Jira integration.",
-      "version": "1.0.0"
-    },
     {
       "name": "adze-bonch",
       "source": "./plugins/adze-bonch",
