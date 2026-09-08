@@ -96,6 +96,28 @@ judging. Every agent gets its inputs pasted into its instructions in full,
 because the agents have no access to adze themselves -- they cannot go fetch a
 document by id, so nothing may be passed as a reference.
 
+The whole lifecycle at a glance; each box is a subsection below.
+
+```mermaid
+flowchart TD
+    A["Load task, open progress log"] --> B["Scrum-master picks the workflow"]
+    B --> C["Research the target repo"]
+    C --> D["Plan, one decision per turn"]
+    D --> E["Create the branch"]
+    E --> F["Write failing tests first (TDD default)"]
+    F --> G["Implementer takes the tests green"]
+    G --> H["Quality gate: reviewers run in parallel"]
+    H --> I["Repro-verifier proves each finding"]
+    I -->|Confirmed| J["Fix"]
+    I -->|Proven-safe| K["Drop, no fix cycle spent"]
+    J --> L["Confirm-fix: re-run the finding's own repro"]
+    L -->|repro still fails| J
+    L -->|repro passes| M["Promote the repro to a regression test"]
+    K --> N["Commit check: Done-when plus full checklist"]
+    M --> N
+    N --> O["Handoff summary. Pushing is yours."]
+```
+
 ### Loading the task
 
 The main assistant loads the discipline document from adze, resolves which
@@ -632,58 +654,3 @@ The same split explains settings. Any workflow setting is resolved through a
 chain, first hit wins: what you said in this message, then the project's
 `workflow_overrides` block, then your user profile, then the canonical default.
 Three of those four live in adze.
-
----
-
-## 7. Contradictions I found
-
-Where two source files disagree, `commands/tackle.md` is authoritative. These
-are the disagreements worth knowing about.
-
-1. **When the task id is resolved.** `gate/README.md` says the task id passed to
-   `adze-gate repro-dir` is "the same id already resolved at Step 1". In
-   `commands/tackle.md` the task is resolved at **Step 0**, and its own step 4c.5
-   text says "already resolved at Step 0". Tackle wins; `gate/README.md`'s step
-   number is stale.
-
-2. **Whether the lock fallback warns.** `gate/README.md` says both tools degrade
-   to unlocked behavior "with a warning, not silently" when `flock` is missing.
-   `commands/setup.md` says `gate-check.sh` "silently falls back to the old
-   unlocked behavior (it does not warn, since a warning would fire on every edit
-   while a gate is open)". Reading `gate/gate-check.sh` settles it: there is no
-   warning path in the hook, so setup.md is correct and gate/README.md's blanket
-   sentence is wrong for the hook (it is right for the `adze-gate` CLI, which
-   does warn to stderr).
-
-3. **How many commands there are.** `commands/setup.md` step 7 prints a
-   quickstart listing four commands and omits `/adze-bonch:tackle` entirely.
-   `README.md` and `commands/main.md` both list five. A new user who follows
-   setup to the end never learns the main command exists.
-
-4. **What `adze-gate close` refuses on.** `commands/tackle.md` step 5 describes
-   the refusal as happening "while any Confirmed finding is missing a
-   `confirm-fix` record". `gate/README.md` documents a second refusal too: it
-   also refuses while any finding has no Confirmed or Proven-safe verdict at all,
-   including one left Inconclusive. Not opposite, but tackle's account is
-   incomplete, and a run left with an Inconclusive finding will hit a refusal
-   tackle.md does not predict.
-
-5. **Where the branch comes from.** `README.md` says the branch is "created from
-   the target repo's default branch". `commands/tackle.md` step 3 just runs
-   `git switch -c` from wherever you are, and later calls the base "whatever the
-   branch was created from in Step 3, usually `main`". If you start a run from a
-   non-default branch, tackle's behavior is what you get, not the README's.
-
-6. **Stale version references.** `commands/main.md` and `commands/status.md` both
-   explain the project lookup in terms of what "v0.1.0" does or does not support.
-   `README.md` declares the plugin v0.6.0. The described behavior appears current;
-   only the version labels are old.
-
-7. **Writing under `~/.claude/`.** `seeds/discipline.md` rule 4 says agents must
-   not write to `~/.claude/` during work sessions, and `commands/setup.md` step 5
-   makes that a hard rule for the CLAUDE.md pointer text. Yet setup step 6
-   option 3 and all of step 6.5 write into `~/.claude/settings.json`, and the
-   enforcement tooling keeps all its state in `~/.claude/adze-bonch/`. Setup
-   names this and calls it a sanctioned exception you are opting into directly,
-   so it is a deliberate carve-out rather than an oversight -- but the two files
-   do state opposite defaults, and the carve-out is easy to miss.
