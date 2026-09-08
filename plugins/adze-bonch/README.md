@@ -65,10 +65,6 @@ The full list, with the reasoning behind each, is in [`docs/how-it-works.md`](do
 
 Every command loads a canonical discipline document from adze: synchronous decision persistence, the supersede pattern for history, the authoritative-doc shape, the memory-vs-adze split, and four named protocols that agents emit as literal tokens (`[GOVERNANCE]`, `[PLAN-TEST-CONFLICT]`, `[SCOPE-EXPANSION]`, `[UNVERIFIED]`). Any workflow setting resolves through a lookup chain, first hit wins: session override, then the project's `workflow_overrides`, then your user profile, then the canonical default. The five conventions are listed in `seeds/discipline.md`; [`docs/how-it-works.md`](docs/how-it-works.md) covers the protocols, the lookup chain, and the seed-file-versus-adze-document split that decides which edits change behavior.
 
-## Design log
-
-The decisions behind adze-bonch (split projects, live-doc discipline, the wizard order, the Project Pulse and its anti-bloat budget, and the rest) are tracked in the maintainer's adze workspace, not in this repo.
-
 ## Credits
 
 Built on [adze](https://github.com/4lt7ab/adze) by [@4lt7ab](https://github.com/4lt7ab).
