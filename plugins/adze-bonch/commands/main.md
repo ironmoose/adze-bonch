@@ -1,6 +1,6 @@
 ---
 name: main
-description: "Unified adze project orchestrator. Loads discipline from adze, detects intent, routes to the right sub-flow. Use /adze-bonch:main for status, save, brainstorm, refine, and tackle."
+description: "Unified adze project orchestrator. Loads discipline from adze, detects intent, routes to the right sub-flow. Use /adze-bonch:main for status, save, and tackle."
 ---
 
 # adze-bonch -- Project Orchestrator
@@ -28,7 +28,6 @@ If the discipline doc cannot be loaded, halt and tell the user to run `/adze-bon
 
 Some intents do not need project context. Check these FIRST:
 
-- **PR review intent** (PR URL, "review PR #123", "pr dashboard") → `Skill("pr-review:review")` with the user's args (requires pr-review plugin). Skip all other steps.
 - **"listen"** → `Skill("listen")` immediately. Skip all other steps.
 
 ## Step 2: Load Adze Context
@@ -41,7 +40,7 @@ Resolve the active project via this lookup chain (first hit wins). There is no `
 4. **Ask the user.** Present a short pick-list (active projects, capped) and prompt. Cache the chosen id for the session.
 
 **If no match found:**
-- User described an idea → ask whether to start a new project. If yes, route to brainstorm flow (not yet shipped in v0.1.0; for now, walk the user through `mcp__adze__projects_create` manually).
+- User described an idea → ask whether to start a new project. If yes, help them create the project directly with `mcp__adze__projects_create`; a dedicated brainstorm flow is planned but not yet available.
 - No idea described → ask which project they mean. Stop.
 
 **If matched:**
@@ -102,9 +101,8 @@ Parse the user's message to determine the workflow:
 | "save", "save our work", "persist", "checkpoint" | `/adze-bonch:save` |
 | "status", "where are we", just `/adze-bonch:main` | Show status from Step 4, ask what they want to do |
 | "tackle X", "work on X", "implement" | `/adze-bonch:tackle` (pass user's message as args) |
-| "brainstorm", "new idea" | brainstorm flow (NOT YET SHIPPED) |
-| "refine", "groom", "review tasks" | refine flow (NOT YET SHIPPED) |
-| PR URL, "review PR" | `Skill("pr-review:review")` |
+| "brainstorm", "new idea" | brainstorm flow (not available yet) |
+| "refine", "groom", "review tasks" | refine flow (not available yet) |
 | "listen" | `Skill("listen")` |
 
 When routing, pass the user's original message as args to the sub-flow.

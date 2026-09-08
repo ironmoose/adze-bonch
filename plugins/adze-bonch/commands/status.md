@@ -81,7 +81,7 @@ Recent Decisions (last 3 docs)
   - {created_at date}  {doc.title}
 
 What's next
-  {first task with status:todo, or 'No todo tasks. Refine or brainstorm.'}
+  {first task with status:todo, or 'No todo tasks.'}
 ```
 
 ## Hard Rules

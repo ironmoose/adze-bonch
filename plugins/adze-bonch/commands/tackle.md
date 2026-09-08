@@ -505,7 +505,7 @@ Quality gate: {N} findings, {N} fixed, {N} deferred
 Verification: all passing
 ```
 
-For PR creation or review: hand off to the sister plugin via `Skill("pr-review:review")`. adze-bonch does not do PR review itself.
+adze-bonch does not create or review pull requests; that is yours.
 
 Append to task-log: `Handoff complete.`
 

@@ -450,7 +450,7 @@ Quality gate: {summary}
 Verification: all passing
 ```
 
-Ask: **"Ready to open a PR? I can hand off to the sister `pr-review` plugin."** On yes, invoke `Skill("pr-review:review")`. adze-bonch does not do PR review itself.
+adze-bonch does not open or review pull requests; that is yours.
 
 Append to task-log: `Handoff complete.` (or `PR created: {url}`)
 
