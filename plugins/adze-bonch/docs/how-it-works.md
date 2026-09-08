@@ -4,6 +4,15 @@ A plain-language tour of what this plugin does, why each part exists, and what
 it will not do for you. Nothing here requires reading the source. If you want
 per-agent detail after this, read [`agents-guide.md`](agents-guide.md).
 
+## Contents
+
+1. [1. What this is and what it's for](#1-what-this-is-and-what-its-for)
+2. [2. The five commands](#2-the-five-commands)
+3. [3. The main event: what happens to a task, start to finish](#3-the-main-event-what-happens-to-a-task-start-to-finish)
+4. [4. The four flag words](#4-the-four-flag-words)
+5. [5. What it will not do for you](#5-what-it-will-not-do-for-you)
+6. [6. Where the rules actually live](#6-where-the-rules-actually-live)
+
 ---
 
 ## 1. What this is and what it's for
@@ -118,7 +127,8 @@ flowchart TD
     N --> O["Handoff summary. Pushing is yours."]
 ```
 
-### Loading the task
+<details>
+<summary><b>Loading the task</b> - resolve the task and open a progress log</summary>
 
 The main assistant loads the discipline document from adze, resolves which
 project you are in, and then resolves the task itself -- by id or title fragment
@@ -137,7 +147,10 @@ mid-run, the next session can read the log and know exactly which step was in
 flight rather than guessing or starting over. It is also the paper trail that
 makes the final commit checklist checkable against something other than memory.
 
-### Choosing the workflow
+</details>
+
+<details>
+<summary><b>Choosing the workflow</b> - a fast agent picks standard, lightweight, docs-only, or custom</summary>
 
 A small, fast agent (`scrum-master`) reads the task and returns a short plan:
 which of four workflows to run -- **standard**, **lightweight**, **docs-only**,
@@ -149,7 +162,10 @@ recommendation and can override any field.
 cost the same. Without an explicit routing decision the choice gets made
 implicitly and inconsistently, usually in whichever direction is least work.
 
-### Research
+</details>
+
+<details>
+<summary><b>Research</b> - explore the repo and ground third-party facts in current docs</summary>
 
 An agent (`researcher`) explores the target repository and comes back with a
 summary: what the current behavior is, which files are involved, what the call
@@ -163,7 +179,10 @@ skipped and the existing one is read instead.
 that has to be rewritten during implementation. It is also cheaper to read the
 repo once, carefully, than to have five later agents each half-read it.
 
-### Planning
+</details>
+
+<details>
+<summary><b>Planning</b> - one decision per turn, grounded, fixing the file set and a Done-when</summary>
 
 Planning stays with the main assistant and is deliberately a conversation, not a
 finished document handed over for a yes/no. The rule is one decision per turn:
@@ -197,7 +216,10 @@ interrupts you again.
 ask you follow-up questions. Ambiguity that survives planning becomes a guess
 made by an agent with less context than you have.
 
-### Branching
+</details>
+
+<details>
+<summary><b>Branching</b> - a feature branch off the base, and the language is resolved here</summary>
 
 The main assistant creates and checks out a feature branch in the target repo,
 named from the task title. If the branch already exists from a previous session
@@ -212,7 +234,10 @@ the test writer and the implementer, not just to the reviewers.
 *Why this stage exists:* the branch is the smallest unit of "this can be thrown
 away". It also fixes the base that every later diff is measured against.
 
-### Tests first
+</details>
+
+<details>
+<summary><b>Tests first</b> - failing tests against the plan, confirmed red, the default</summary>
 
 By default the test writer runs **before** any implementation. It writes tests
 against the interface the plan describes, with no implementation present, so
@@ -221,7 +246,10 @@ confirm they really do fail. Tests that unexpectedly pass are reported to you
 before anything continues, because a test that passes against nothing is testing
 nothing.
 
-### Implementation
+</details>
+
+<details>
+<summary><b>Implementation</b> - the implementer takes the tests green, the only writer of code</summary>
 
 The `implementer` agent gets the repo path, the branch, the full text of the
 relevant plan steps, the acceptance criteria, the resolved conventions, and the
@@ -237,7 +265,10 @@ attempts across implementation, tests, and later fixes combined: past that, a
 task usually has a plan problem rather than a code problem, and the run stops
 for a rethink.
 
-### The group of reviewers
+</details>
+
+<details>
+<summary><b>The group of reviewers</b> - reviewers run in parallel on a diff pinned to the remote base</summary>
 
 This step is mandatory and never skipped, not even for a one-line change.
 
@@ -270,7 +301,10 @@ Per-agent detail is in [`agents-guide.md`](agents-guide.md).
 reading modes, and one agent asked to do all seven does none of them well. They
 run at the same time because they do not depend on each other.
 
-### Proving the findings by running code
+</details>
+
+<details>
+<summary><b>Proving the findings by running code</b> - Confirmed, Proven-safe, or Inconclusive per finding</summary>
 
 Now the important part. Every finding goes to the `repro-verifier`, which is
 read-only over your code but has a durable scratch directory of its own, outside
@@ -300,7 +334,10 @@ genuinely cannot be run after all that does the run stop and tell you.
 the bug is real. Without execution there is no way to tell a real finding from a
 well-written guess, and both cost the same to "fix".
 
-### Fixing
+</details>
+
+<details>
+<summary><b>Fixing</b> - fix the Confirmed findings, drop the Proven-safe ones</summary>
 
 The same `implementer` agent that wrote the code is started again in fix mode,
 with the findings and their verdicts pasted in, including any you explicitly
@@ -311,7 +348,10 @@ That verification does **not** confirm any finding. The suite was already green
 while the defect existed -- that is precisely why the finding needed a
 reproduction script in the first place.
 
-### Proving the fix
+</details>
+
+<details>
+<summary><b>Proving the fix</b> - re-run each finding's own script, and enumerate every other path</summary>
 
 Also mandatory, also never skipped. For every finding that was Confirmed, the
 `repro-verifier` runs **that finding's own script again** against the fixed
@@ -347,7 +387,10 @@ decision is never a valid ending. A finding with no other paths at all is fine,
 but only when the verifier says so explicitly and shows the search that supports
 it.
 
-### Turning proven bugs into permanent tests
+</details>
+
+<details>
+<summary><b>Turning proven bugs into permanent tests</b> - promote each repro into a regression test</summary>
 
 A reproduction script is evidence, not a guard. It lives in a scratch directory
 outside your repo, and once the run ends nothing stops the same defect coming
@@ -377,7 +420,10 @@ suite and would erode trust in it. What is not allowed is skipping the decision
 silently, because a silent skip reads exactly like "there was nothing to
 promote".
 
-### The commit check
+</details>
+
+<details>
+<summary><b>The commit check</b> - a checklist that must be all true, staged by name, never pushed</summary>
 
 Before anything is committed you are shown a checklist, and every line must be
 true:
@@ -401,12 +447,17 @@ Once you confirm, files are staged **by name** -- never `git add -A` -- and
 committed with a conventional-commit message. The plugin never pushes. That is
 yours.
 
-### Handoff
+</details>
+
+<details>
+<summary><b>Handoff</b> - a summary, and pushing and pull request review are yours</summary>
 
 Finally you get a summary: branch, commit hash, files changed, tests added,
 finding counts, verification state. The run ends at the summary; pushing and
 pull request review are yours, and adze-bonch does not review pull requests
 itself.
+
+</details>
 
 ---
 
