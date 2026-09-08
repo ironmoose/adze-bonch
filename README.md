@@ -1,52 +1,31 @@
 # adze-bonch
 
-This repo is a Claude Code plugin marketplace that ships one plugin: `adze-bonch`, workflow discipline for [adze](https://github.com/4lt7ab/adze) projects. Install the marketplace once, then install the plugin.
+A Claude Code plugin that keeps projects tracked in [adze](https://github.com/4lt7ab/adze) disciplined: decisions are written to adze as they happen, each project keeps a one-document resume trail, and tasks run through a review gate whose findings are proven by reproduction before they get fixed.
 
-## Plugin
+This repository is the plugin's marketplace. The full documentation, including setup, the command list, and every step of the tackle lifecycle, lives in the plugin's own README:
 
-| Plugin | Command | What it does |
-|--------|---------|--------------|
-| **[adze-bonch](plugins/adze-bonch/README.md)** | `/adze-bonch:main` | Workflow discipline for [adze](https://github.com/4lt7ab/adze) projects. Setup wizard, decision persistence, the Project Pulse session-resume trailhead, and a full tackle lifecycle: 12 specialized agents, TDD by default, TypeScript/Python conventions overlays, a parallel quality gate, and a repro-verify step that proves or refutes findings before they are fixed. |
-
-## Retired plugins
-
-`tab-workflow` was the original project lifecycle manager, built on [Tab for Projects](https://github.com/4lt7ab/Tab). It is retired and superseded by `adze-bonch`, which does the same job on top of [adze](https://github.com/4lt7ab/adze). If you were running `tab-workflow`, move to `adze-bonch`. The plugin has been removed from the repo; its history is still in git if anyone needs it.
-
-`pr-review` also shipped from this repo and has been retired. It is no longer part of this repo.
+**[plugins/adze-bonch/README.md](plugins/adze-bonch/README.md)**
 
 ## Install
 
 ```
-# Add the marketplace
 /plugin marketplace add ironmoose/adze-bonch
-
-# Install the plugin
 /plugin install adze-bonch@ironmoose-marketplace
 ```
 
-adze-bonch requires a running [adze](https://github.com/4lt7ab/adze) MCP server.
+adze-bonch needs a running [adze](https://github.com/4lt7ab/adze) MCP server. The [plugin README](plugins/adze-bonch/README.md) has the server config.
 
 ## Update
 
 ```
-# Pull the latest plugin version
 /plugin marketplace update ironmoose-marketplace
-
-# Update the plugin
 /plugin update adze-bonch@ironmoose-marketplace
 ```
 
-## For other editors
-
-The command `.md` files are portable. Agents and rules are Claude Code-specific.
-
-```bash
-git clone git@github.com:ironmoose/adze-bonch.git
-# Copy plugins/adze-bonch/commands/*.md into your editor's command directory
-```
-
-Plugin directory is `plugins/adze-bonch`.
-
 ## Credits
 
-Built on [adze](https://github.com/4lt7ab/adze), and previously on [Tab for Projects](https://github.com/4lt7ab/Tab) for the retired `tab-workflow`, both by [@4lt7ab](https://github.com/4lt7ab).
+Built on [adze](https://github.com/4lt7ab/adze) by [@4lt7ab](https://github.com/4lt7ab).
+
+---
+
+Earlier versions of this repository also shipped `tab-workflow` and `pr-review`. Both are retired; their history is in git.

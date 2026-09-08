@@ -392,8 +392,9 @@ yours.
 ### Handoff
 
 Finally you get a summary: branch, commit hash, files changed, tests added,
-finding counts, verification state. Pull request work is handed to the sister
-`pr-review` plugin. adze-bonch does not review pull requests itself.
+finding counts, verification state. The run ends at the summary; pushing and
+pull request review are yours, and adze-bonch does not review pull requests
+itself.
 
 ---
 
@@ -566,8 +567,7 @@ for your confirmation, then restores file by file. It is explicitly not
 authorized to reach for `git reset --hard` or `git clean -f`.
 
 **It never pushes, and it does not review pull requests.** Commit is the last
-thing it does. Pushing is yours, and pull request review is handed to the
-`pr-review` plugin.
+thing it does. Pushing is yours, and pull request review is yours.
 
 **Several flows are not built.** Brainstorm, refine, and verify are named in the
 routing table and are not shipped; for a new project you call adze directly. The
