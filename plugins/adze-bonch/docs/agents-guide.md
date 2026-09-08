@@ -99,6 +99,7 @@ This plugin breaks the work of finishing a coding task into a team of narrow spe
 **A concrete example of something it would catch:** `listReports({statuses: []})` passes an empty array straight into a database array-match filter. An empty array matches nothing, so the query returns zero rows. The intent was "no filter means everything." The user clears all the filter chips in the UI and the table goes blank. The agent flags it as critical and recommends omitting the clause entirely when the array is empty, plus a test for the empty-filter case.
 
 **When it will NOT help:** It never runs the code, so every finding is a hypothesis until a later agent actually reproduces it. It writes no tests and no fixes. It ignores pre-existing problems in code your change did not touch. And it is deliberately restrained about invented inputs: before claiming a bug that a specific value triggers, it must name where that value came from (a real sample file, a test fixture, a log line). If the honest answer is "I made it up," it is required to report it quietly as a question instead of a defect, so some real-but-unproven concerns land lower than you might expect.
+
 ### Design smell reviewer (code-smells-reviewer)
 
 **One line:** Flags design problems that are not bugs but make the code hard to live with.
