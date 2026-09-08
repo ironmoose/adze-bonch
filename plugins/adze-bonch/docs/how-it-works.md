@@ -221,11 +221,6 @@ confirm they really do fail. Tests that unexpectedly pass are reported to you
 before anything continues, because a test that passes against nothing is testing
 nothing.
 
-The step numbering is confusing on purpose in the source and worth stating
-plainly here: the labels `4a` (implementer) and `4b` (test writer) name agents,
-not run order. Under the default, the test writer has already run and step `4b`
-only re-runs verification to confirm the tests are now green.
-
 ### Implementation
 
 The `implementer` agent gets the repo path, the branch, the full text of the
@@ -247,18 +242,10 @@ for a rethink.
 This step is mandatory and never skipped, not even for a one-line change.
 
 First the diff is captured, and how it is captured matters. The base is resolved
-as a commit hash against the **remote** branch, not the local one:
-
-```
-git -C <repo> fetch origin <base-ref>
-BASE_SHA=$(git -C <repo> merge-base origin/<base-ref> HEAD)
-git -C <repo> diff -M $BASE_SHA...HEAD -- <files>
-```
-
-A local base branch is routinely behind its remote. Using the bare local name
-silently hands the reviewers a larger diff than the change actually is, showing
-them other people's committed code as if it were newly written, and they have no
-way to tell. Renames are kept as renames so a moved file does not read as a
+against the remote branch, not the local one: a local base branch is routinely
+behind its remote, and using it would silently hand the reviewers a larger diff
+than the change is, showing them other people's committed code as if it were
+newly written. Renames are kept as renames so a moved file does not read as a
 deletion plus a suspicious new file.
 
 Then reviewers run at the same time, each one reading the full diff pasted into
@@ -286,10 +273,9 @@ run at the same time because they do not depend on each other.
 ### Proving the findings by running code
 
 Now the important part. Every finding goes to the `repro-verifier`, which is
-read-only over your code but has a scratch directory of its own at
-`~/.claude/adze-bonch/repros/{task_id}/`. That location is deliberate: it lives
-outside the repo, and it survives sessions and reboots, because the script
-written here may need to be run again days later from a different session.
+read-only over your code but has a durable scratch directory of its own, outside
+the repo, that survives sessions and reboots, because the script written there
+may need to run again later from a different session.
 
 For each finding it writes and runs a reproduction script and returns one of
 three verdicts:
@@ -299,6 +285,10 @@ three verdicts:
   disproves it. Drop it. Do not spend a fix cycle on it.
 - **Inconclusive** -- could not be settled either way. You are told, and you
   decide whether to fix it anyway.
+
+If the optional `adze-gate` tool is installed it does not take the verdict on
+faith: it executes the script itself rather than trusting the report, requiring
+a Confirmed finding's script to exit non-zero and a Proven-safe one to exit zero.
 
 It also runs the target repo's own checks. If it reports that it could not run
 something, that is the main assistant's problem to clear, not a reason to skip:
@@ -420,86 +410,11 @@ itself.
 
 ---
 
-## 4. Four ideas worth understanding
-
-### Tests come first by default
-
-Unless the routing agent says otherwise, the failing tests are written before
-the implementation and confirmed red, and the implementer's job is to make them
-green. This is the default, not an option, and the source says outright: do not
-silently fall back to writing code first.
-
-The reason is about who defines "correct". If the tests come after the code,
-they are written by reading the code, and they encode whatever the code does,
-including its bugs. Written first, from the plan, they encode what the plan said
-should happen, and the gap between those two things becomes visible instead of
-being quietly closed.
-
-The exceptions are narrow and named: docs-only changes, dependency version
-bumps, pure configuration, and mechanical refactors -- work with no meaningful
-logic to test first. In those cases the test writer runs after implementation
-instead. Everything else is test-first.
-
-There is a matching flag word for when the two collide. If the implementer
-finds that a failing test cannot be made to pass without breaking the written
-plan, it is not allowed to quietly bend either one. It stops and says so.
-
-### A review finding is not real until a script proves it
-
-Static review reads code and produces a description of a bug. That description
-is equally fluent whether the bug exists or not. So each finding gets a script,
-and the script decides:
-
-- **Confirmed** means the script ran against your actual code and demonstrated
-  the problem. This one is real. Fix it.
-- **Proven-safe** means the script ran and the claimed problem did not happen,
-  with the output as evidence. The reviewer was wrong. The finding is dropped,
-  and no fix attempt is spent on it. This is the outcome that saves the most
-  time, and it only exists because something was run.
-- **Inconclusive** means it could not be settled either way. It is not treated
-  as either true or false. You are told and you choose.
-
-If the optional `adze-gate` tool is installed, it does not take the verdict on
-faith: it executes the script itself and requires a Confirmed one to exit
-non-zero and a Proven-safe one to exit zero. When the tool rejects a verdict,
-that mismatch is real information -- the script does not demonstrate what the
-report says it does -- and it is shown to you rather than argued away.
-
-The reason a green test suite is never accepted as proof that a fix worked
-follows directly. The suite was already green while the defect existed. If it
-had covered the case, the reviewer would have had nothing to find. Its passing
-after the fix is the same non-signal it was before.
-
-### Fixing a bug is not done until its own reproduction script passes
-
-The rule has a specific origin, and the story explains it better than the rule
-does.
-
-On 2026-08-25 a finding was Confirmed: a terminal was being opened automatically
-while a dependency it needed was missing. Someone fixed it by moving the call to
-a different place and adding a comment that accurately described the new
-arrangement. The underlying dependency was never traced, so the defect survived
-the fix.
-
-Then everything downstream agreed it was fine. The repo's test suite was green,
-because it had never covered that case -- that was true before the fix and
-stayed true after. A separate reviewer read the new comment, found it accurate,
-and passed the fix. Verification ran twice, after implementation and after the
-fix, and missed it both times. The one thing that would have caught it was the
-script that had already proved the bug an hour earlier, sitting in a scratch
-directory, never run again.
-
-So: the script that proved the defect is re-run against the fixed code, and it
-must pass. Not the suite. Not a reviewer's reading. Not the fixer's confidence.
-The same script, run again. That is also why the scratch directory is durable
-rather than temporary -- the fix often lands in a different session from the one
-that wrote the script.
-
-### Four flag words
+## 4. The four flag words
 
 Agents cannot ask you questions. So they emit literal tokens in their output,
 and the main assistant scans for these after **every** agent returns, before
-continuing. Their full definitions live in `seeds/named-protocols.md`.
+continuing.
 
 **`[GOVERNANCE]`** -- the agent noticed a change to the plan, scope, or timeline
 that you did not sanction this session. A dependency appeared that moves the
@@ -542,12 +457,9 @@ other three, this one does not halt anything -- but it must be shown to you in
 the **same** response that carries the claim, never as a caveat added after you
 have already read the claim as fact.
 
-That rule came from a real miss on 2026-08-29: asked about a Minecraft block it
-did not recognize, the assistant assembled four consistent circumstantial clues
-into a confident, wrong answer. The block was real and from a game update that
-postdated its training. One web search would have settled it, and the user had
-to ask for that search himself. The failure was not missing information. It was
-not noticing that information needed fetching.
+The failure this guards against is not missing information but not noticing that
+information needs fetching: assembling several consistent circumstantial clues
+into a confident, wrong answer when a single lookup would have settled it.
 
 ---
 
@@ -568,7 +480,7 @@ editing gets stuck. Same for its file locking: if `flock` is not available
 proceeds without the lock rather than hang.
 
 **The enforcement tooling is opt-in and defaults to off.** `adze-gate` and its
-hook are installed only if you say yes at setup step 6.5, which defaults to no.
+hook are installed only if you opt in during setup, which defaults to off.
 When it is absent, the verification steps are still mandatory -- they are just
 not mechanically blocking anything while they happen. The tool is the
 enforcement of the discipline, not the discipline.
@@ -626,29 +538,24 @@ step that passes a document id instead of its contents is a bug, not a shortcut.
 
 Two places, and the split is the point.
 
-**In the plugin, on disk:** the command procedures (`commands/*.md`), the agent
-definitions (`agents/*.md`), the language rules files and prompt templates
-(`reference/*.md`), the enforcement scripts (`gate/`), the voice templates, and
-the seed copies of the shared documents (`seeds/*.md`). This is the machinery.
-It changes when the plugin is updated.
+**In the plugin, on disk:** the fixed machinery. The command procedures, the
+agent definitions, the language rules files and prompt templates, the
+enforcement scripts, and the seed copies of the shared documents. This is what
+changes when the plugin is updated.
 
-**In adze, as live documents:** the discipline document, the named protocols,
-the workflow description, the branch-naming and progress-log and Pulse formats,
-the default voice -- all of these are *copies* of the `seeds/*.md` files, made by
-setup, and they are what the commands actually read at runtime. Alongside them:
-your user profile, each project's `workflow_overrides` block, and every task's
-own research, plan, progress log, and Pulse.
+**In adze, as live documents:** the discipline text. The discipline document,
+the named protocols, the workflow description, the branch-naming and
+progress-log and Pulse formats, the default voice. These are the copies setup
+made from the plugin's seeds, and they are what the commands actually read at
+runtime. Alongside them: your user profile, each project's `workflow_overrides`
+block, and every task's own research, plan, progress log, and Pulse.
 
-That copy is why editing one file may change nothing. Editing `seeds/discipline.md`
-in the plugin does not change how anything behaves, because `/adze-bonch:main`
-loads the adze document, not the file. The plugin file only reaches adze when
-setup runs again, notices the running plugin version is newer than the one
-recorded in the bootstrap-state document, compares the stored hash of each seed
-against the file's current hash, and creates a new document superseding the old
-one where they differ. Conversely, editing the adze document changes behavior
-immediately and permanently for you, and changes nothing in the plugin -- which
-is deliberate, and is exactly what the discipline document means when it says
-"edit this doc in adze, not in the plugin repo, to evolve discipline live".
+That split is why editing one file may change nothing. Editing the plugin's
+copy does not change how anything behaves, because the commands load the adze
+document, not the file, and the plugin file only reaches adze when setup runs
+again. Editing the adze document, by contrast, changes behavior immediately and
+permanently for you and changes nothing in the plugin. That is deliberate: to
+evolve the discipline live, edit the adze document, not the plugin repo.
 
 The same split explains settings. Any workflow setting is resolved through a
 chain, first hit wins: what you said in this message, then the project's
