@@ -19,9 +19,9 @@ Step 3.5:  Write Failing Tests (adze-bonch:test-writer, TDD mode only)
 Step 4a:   Implement           (adze-bonch:implementer) -> verify
 Step 4b:   Tests               (adze-bonch:test-writer) -> verify
 Step 4c:   Quality Gate        (reviewers in parallel)
-Step 4c.5: Repro-Verify        (adze-bonch:repro-verifier, MANDATORY every workflow, no skip conditions) -> verdicts feed 4d
+Step 4c.5: Repro-Verify        (prove-it:repro-verifier, MANDATORY every workflow, no skip conditions) -> verdicts feed 4d
 Step 4d:   Fix Findings        (adze-bonch:implementer, fix-cycle mode) -> verify
-Step 4d.5: Confirm-Fix         (adze-bonch:repro-verifier, MANDATORY every workflow, no skip conditions) -> each Confirmed repro must now PASS
+Step 4d.5: Confirm-Fix         (prove-it:repro-verifier, MANDATORY every workflow, no skip conditions) -> each Confirmed repro must now PASS
 Step 4e:   Promote Tests       (adze-bonch:test-writer, promote mode, MANDATORY decision every workflow) -> Confirmed-and-fixed repros become permanent regression tests
 Step 5:    Commit              (main: commit gate)
 Step 6:    Handoff             (main: summary, PR handoff)
@@ -37,15 +37,18 @@ Step 6:    Handoff             (main: summary, PR handoff)
 | 1 | `adze-bonch:researcher` | Returns a research summary; the ORCHESTRATOR writes the `kind:research` doc. |
 | 3.5, 4b | `adze-bonch:test-writer` | TDD default: runs FIRST at Step 3.5, producing failing tests. Step 4b is the non-TDD slot. |
 | 4a, 4d | `adze-bonch:implementer` | Under TDD, runs after the tests, to green. 4d is the SAME agent in fix-cycle mode. |
-| 4c | `adze-bonch:code-reviewer` | Read-only. Target repo conventions, injected by the orchestrator. |
-| 4c | `adze-bonch:acceptance-qa` | Read-only. Acceptance criteria. Skipped on lightweight. |
-| 4c | `adze-bonch:edge-case-qa` | Read-only. Boundary conditions. Skipped on lightweight. |
-| 4c | `adze-bonch:code-smells-reviewer` | Read-only. Design quality. |
-| 4c | `adze-bonch:test-reviewer` | Read-only. Test quality. |
-| 4c | `adze-bonch:self-containment-reviewer` | Read-only. Private-context leak detection. Runs on standard, lightweight, AND docs-only. |
-| 4c | `adze-bonch:comment-claim-verifier` | Read-only, but traverses beyond the diffed hunk to trace a claim's referents (assignment sites, guards, callers). Falsifiable-claim verification against changed comments and docstrings. Runs on standard, lightweight, AND docs-only. |
-| 4c.5 | `adze-bonch:repro-verifier` | Read-only plus a durable scratch dir (`~/.claude/adze-bonch/repros/{task_id}/`, survives across sessions and reboots). **Mandatory on every workflow, no skip conditions.** Verdicts (Confirmed / Proven-safe / Inconclusive) feed 4d. Also runs the target repo's own gate commands. |
-| 4d.5 | `adze-bonch:repro-verifier` | The SAME agent as 4c.5, in confirm mode. **Mandatory on every workflow, no skip conditions.** Re-runs every Confirmed finding's own repro against the fixed code; each one must now PASS. Also enumerates every other path reaching the defective behavior and marks each COVERED or NOT COVERED. |
+| 4c | `prove-it:code-reviewer` | Read-only. Target repo conventions, injected by the orchestrator. |
+| 4c | `prove-it:acceptance-qa` | Read-only. Acceptance criteria. Skipped on lightweight. Reads its "stated intent" from a PR/commit/`--goal`, not from adze -- the orchestrator MUST inline the adze task description and acceptance criteria (from Step 0) into its prompt as that stated intent, or acceptance coverage regresses. |
+| 4c | `prove-it:edge-case-qa` | Read-only. Boundary conditions. Skipped on lightweight. |
+| 4c | `prove-it:code-smells-reviewer` | Read-only. Design quality. |
+| 4c | `prove-it:test-reviewer` | Read-only. Test quality. |
+| 4c | `prove-it:self-containment-reviewer` | Read-only. Private-context leak detection. Runs on standard, lightweight, AND docs-only. |
+| 4c | `prove-it:comment-claim-verifier` | Read-only, but traverses beyond the diffed hunk to trace a claim's referents (assignment sites, guards, callers). Falsifiable-claim verification against changed comments and docstrings. Runs on standard, lightweight, AND docs-only. |
+| 4c | `prove-it:contract-reviewer` | Read-only. Type signatures, pre/post-conditions, API/schema contracts honored. Standard only. |
+| 4c | `prove-it:security-reviewer` | Read-only. Exploitable vulnerabilities, each finding carrying a concrete attack path. Standard only. |
+| 4c | `prove-it:doc-vouching-reviewer` | Read-only. Consequences a reassuring "vouching" comment omits. Standard only. |
+| 4c.5 | `prove-it:repro-verifier` | Read-only plus a durable scratch dir (`~/.claude/prove-it/repros/{task_id}/`, survives across sessions and reboots). **Mandatory on every workflow, no skip conditions.** Verdicts (Confirmed / Proven-safe / Inconclusive) feed 4d. Also runs the target repo's own gate commands. |
+| 4d.5 | `prove-it:repro-verifier` | The SAME agent as 4c.5, in confirm mode. **Mandatory on every workflow, no skip conditions.** Re-runs every Confirmed finding's own repro against the fixed code; each one must now PASS. Also enumerates every other path reaching the defective behavior and marks each COVERED or NOT COVERED. |
 | 4e | `adze-bonch:test-writer` | Promote mode. For every Confirmed-and-fixed finding, translates its repro into a permanent regression test in the target repo, or explicitly declines with a reason. Preserves the repro's trigger; rewrites the assertion to the correct fixed behavior. Works directly against `REPO_PATH`, like every other tackle-pipeline step: nothing commits before Step 5, so a `HEAD`-based worktree would never see a prior step's uncommitted work. |
 
 **Spawn contract.** Omit `name` on every pipeline spawn. An unnamed spawn returns its final report to you normally. A named spawn is an addressable teammate whose final assistant text is discarded; its report reaches you only if the agent calls `SendMessage`. Pass `name` only when you intend to `SendMessage` that agent later, and when you do, say so in its prompt. Verified by controlled test on 2026-08-29: identical trivial prompts, unnamed delivered in 4 seconds, named delivered nothing.
@@ -263,9 +266,11 @@ git -C <repo-path> diff -M $BASE_SHA...HEAD -- <file1> <file2> ...
 - Sanity check once: if `git rev-parse --short <base-ref>` and `git rev-parse --short origin/<base-ref>` disagree, any `<base-ref>...HEAD` diff is wrong.
 - Keep `-M` so a rename reads as a rename rather than a delete plus a spurious "new" file, and tell the reviewers in their prompt which files are renames or moves.
 
-Per the inline-diff substitution contract in `reference/agent-prompts.md`: inline into EACH reviewer prompt the full diff, the complete current bodies of any functions shown partially by diff context-truncation, and for `code-reviewer` also the resolved project conventions. If the diff exceeds 30k tokens, split by file or feature area and spawn parallel reviewer instances per chunk, then consolidate findings across chunks.
+Per the inline-diff substitution contract in `reference/agent-prompts.md`: inline into EACH reviewer prompt the full diff, the complete current bodies of any functions shown partially by diff context-truncation, and for `prove-it:code-reviewer` also the resolved project conventions. If the diff exceeds 30k tokens, split by file or feature area and spawn parallel reviewer instances per chunk, then consolidate findings across chunks.
 
-**Conventions overlay (all workflow variants).** Inject the overlay resolved at Step 3 into the four language-sensitive reviewers only: `code-reviewer`, `code-smells-reviewer`, `test-reviewer`, `edge-case-qa`. If the changed-file list from Step 4a turned out to span two languages, switch `LANG` to `mixed` here and inject both paths. `acceptance-qa`, `self-containment-reviewer`, and `comment-claim-verifier` take NO overlay. The detection rule lives in `seeds/workflow.md`; do not restate it here.
+**Conventions overlay (all workflow variants).** Inject the overlay resolved at Step 3 into the six language-sensitive reviewers only: `prove-it:code-reviewer`, `prove-it:code-smells-reviewer`, `prove-it:test-reviewer`, `prove-it:edge-case-qa`, `prove-it:contract-reviewer`, `prove-it:security-reviewer`. If the changed-file list from Step 4a turned out to span two languages, switch `LANG` to `mixed` here and inject both paths. `prove-it:acceptance-qa`, `prove-it:self-containment-reviewer`, `prove-it:comment-claim-verifier`, and `prove-it:doc-vouching-reviewer` take NO overlay. The detection rule lives in `seeds/workflow.md`; do not restate it here.
+
+**Acceptance-qa intent injection (load-bearing).** `prove-it:acceptance-qa` reads its "stated intent" from a PR/commit or an explicit `--goal`, not from the adze task. Inline the adze task's description and acceptance criteria, already in context from Step 0, into its spawn prompt as that stated intent. Skipping this collapses its acceptance-criteria coverage to nothing, silently.
 
 Append to task-log: `Spawning quality gate reviewers in parallel.`
 
@@ -273,26 +278,26 @@ Spawn reviewers IN PARALLEL based on workflow type:
 
 | Workflow | Reviewers spawned in parallel |
 |----------|------------------------------|
-| standard | code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, comment-claim-verifier |
-| lightweight | code-reviewer, code-smells-reviewer, self-containment-reviewer, comment-claim-verifier, plus test-reviewer only if the changeset includes test files (4 or 5 total) |
-| docs-only | code-reviewer, self-containment-reviewer, comment-claim-verifier |
+| standard | prove-it:code-reviewer, prove-it:acceptance-qa, prove-it:edge-case-qa, prove-it:code-smells-reviewer, prove-it:test-reviewer, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier, prove-it:contract-reviewer, prove-it:security-reviewer, prove-it:doc-vouching-reviewer |
+| lightweight | prove-it:code-reviewer, prove-it:code-smells-reviewer, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier, plus prove-it:test-reviewer only if the changeset includes test files (4 or 5 total) |
+| docs-only | prove-it:code-reviewer, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier |
 | custom | the set returned by the scrum-master WORKFLOW PLAN |
 
 After all reviewers return, consolidate findings: deduplicate by file:line, keep the higher severity when two reviewers flag the same location.
 
 ### Gate CLI detection (do this once, here)
 
-`adze-gate` is the enforcement CLI that makes 4c.5 and 4d.5 binding instead of advisory. It is installed only if the user opted into `/adze-bonch:setup` Step 6.5, which defaults to no, so it may not be on PATH. Detect it once, at this first point it is needed, and carry the result forward through 4c.5, 4d.5, and Step 5 rather than re-detecting each time:
+`prove-it-gate` is the enforcement CLI that makes 4c.5 and 4d.5 binding instead of advisory. It is installed only if the user opted into `/adze-bonch:setup` Step 6.5, which defaults to no, so it may not be on PATH. Detect it once, at this first point it is needed, and carry the result forward through 4c.5, 4d.5, and Step 5 rather than re-detecting each time:
 
 ```
-command -v adze-gate
+command -v prove-it-gate
 ```
 
 **If present:** open the gate against the consolidated findings, one `--finding` per finding, before dispatching the repro-verifier:
 ```
-adze-gate open --target "{task title}" --finding "{id}:{file}:{summary}" [--finding "{id}:{file}:{summary}" ...]
+prove-it-gate open --target "{task title}" --finding "{id}:{file}:{summary}" [--finding "{id}:{file}:{summary}" ...]
 ```
-This blocks `Edit`/`Write`/`MultiEdit`/`NotebookEdit` in the main session until every finding it names has a recorded verification. Use the same finding ids in every later `adze-gate` call this workflow.
+This blocks `Edit`/`Write`/`MultiEdit`/`NotebookEdit` in the main session until every finding it names has a recorded verification. Use the same finding ids in every later `prove-it-gate` call this workflow.
 
 **If absent:** say so plainly in the task-log line below, and proceed through 4c.5 and 4d.5 exactly as written regardless. **The steps are mandatory; the tool is only the enforcement of them.** No gate installed does not mean no verification -- it means the verification is not mechanically blocking edits while it happens, so hold yourself to the same discipline the CLI would otherwise impose.
 
@@ -306,13 +311,13 @@ Append to task-log: `Quality gate complete. {N} total findings. Gate: {opened fo
 
 Append to task-log: `Spawning repro-verifier.` (crash-recovery anchor before dispatch)
 
-Resolve its scratch dir via `adze-gate repro-dir {task_id}` -- the id here is the adze task id already resolved at Step 0 (the same id written into the task-log and plan documents earlier in this workflow), not a separately invented identifier -- and inline the resulting absolute path into the agent's prompt.
+Resolve its scratch dir via `prove-it-gate repro-dir {task_id}` -- the id here is the adze task id already resolved at Step 0 (the same id written into the task-log and plan documents earlier in this workflow), not a separately invented identifier -- and inline the resulting absolute path into the agent's prompt.
 
-**If `adze-gate` was NOT detected at Step 4c,** there is no `repro-dir` command to call, and that is not a reason to skip this step or to fall back to a session-scoped temp path. Use the literal path `~/.claude/adze-bonch/repros/{task_id}/` and `mkdir -p` it directly. The durability guarantee comes from the path, not from the CLI: it is the same directory `adze-gate repro-dir` would have printed, already outside the target repo's working tree and already exempt from the gate hook.
+**If `prove-it-gate` was NOT detected at Step 4c,** there is no `repro-dir` command to call, and that is not a reason to skip this step or to fall back to a session-scoped temp path. Use the literal path `~/.claude/prove-it/repros/{task_id}/` and `mkdir -p` it directly. The durability guarantee comes from the path, not from the CLI: it is the same directory `prove-it-gate repro-dir` would have printed, already outside the target repo's working tree and already exempt from the gate hook.
 
 This is the ONE place that path gets seeded, so every later reference to it (Step 4d.5, a re-spawn in a later session) resolves the same durable location.
 
-Spawn `adze-bonch:repro-verifier` with the consolidated findings, the captured diff, and `REPO_PATH` inlined. It takes NO conventions overlay: it judges runtime behavior, not language conventions. It is read-only over the repo plus a scratch directory of its own (the durable dir just resolved, not a session-scoped temp path), and it also runs the target repo's own gate commands (lint, typecheck, tests as defined in its CLAUDE.md).
+Spawn `prove-it:repro-verifier` with the consolidated findings, the captured diff, and `REPO_PATH` inlined. It takes NO conventions overlay: it judges runtime behavior, not language conventions. It is read-only over the repo plus a scratch directory of its own (the durable dir just resolved, not a session-scoped temp path), and it also runs the target repo's own gate commands (lint, typecheck, tests as defined in its CLAUDE.md).
 
 **Environment blockers are yours to clear, not a reason to skip.** The repro-verifier is sandboxed and you are not, so before accepting any "could not run it", clear the blockers yourself:
 
@@ -335,11 +340,11 @@ If the gate was opened at Step 4c: record each verdict against it, in the same m
 
 | Verdict | Command |
 |---------|---------|
-| Confirmed | `adze-gate verify <id> --repro <path>` (default mode; the CLI itself re-runs the repro and requires it to exit non-zero) |
-| Proven-safe | `adze-gate verify <id> --repro <path> --proven-safe` (CLI re-runs it and requires exit zero) |
-| Inconclusive | `adze-gate verify <id> --repro <path> --inconclusive --reason "<text>"` |
+| Confirmed | `prove-it-gate verify <id> --repro <path>` (default mode; the CLI itself re-runs the repro and requires it to exit non-zero) |
+| Proven-safe | `prove-it-gate verify <id> --repro <path> --proven-safe` (CLI re-runs it and requires exit zero) |
+| Inconclusive | `prove-it-gate verify <id> --repro <path> --inconclusive --reason "<text>"` |
 
-`<id>` is the finding id used at `adze-gate open`; `<path>` is the repro script the repro-verifier ran to reach that verdict. The CLI executes the repro itself rather than taking the verdict on faith -- if it rejects one (a claimed Confirmed whose repro actually exits zero, say), that is real signal that the repro does not demonstrate what the report claims. Surface the mismatch to the user rather than forcing the command to agree with the report.
+`<id>` is the finding id used at `prove-it-gate open`; `<path>` is the repro script the repro-verifier ran to reach that verdict. The CLI executes the repro itself rather than taking the verdict on faith -- if it rejects one (a claimed Confirmed whose repro actually exits zero, say), that is real signal that the repro does not demonstrate what the report claims. Surface the mismatch to the user rather than forcing the command to agree with the report.
 
 If no gate was opened (CLI not installed): there is nothing to record verdicts into. The verdicts above still feed Step 4d exactly as written; note in the task-log that no CLI enforced this.
 
@@ -375,7 +380,7 @@ Append to task-log: `Spawning repro-verifier for fix confirmation.` (crash-recov
 
 For EVERY finding Step 4c.5 marked Confirmed, **re-run that finding's own repro script against the fixed code. It must now PASS.** Step 4c.5 proved the defect by making a repro FAIL; this step closes that loop with the same script. A red that is never taken green is half a test.
 
-Re-spawn `adze-bonch:repro-verifier` in confirm mode with the Confirmed findings, each one's repro script path from the 4c.5 report, the Step 4d fix diff, and `REPO_PATH` inlined. It returns a pass/fail per repro, with the exit code and output.
+Re-spawn `prove-it:repro-verifier` in confirm mode with the Confirmed findings, each one's repro script path from the 4c.5 report, the Step 4d fix diff, and `REPO_PATH` inlined. It returns a pass/fail per repro, with the exit code and output.
 
 - **The repo's own test suite passing is NOT sufficient.** Those tests did not catch the defect in the first place, which is exactly why the repro exists. A green suite says nothing about this finding.
 - **A fix whose repro still fails is not a fix.** It goes back to Step 4d with the repro output inlined. Do not reword the fix, do not argue from the code that it should work now. This counts against the Step 4d fix-cycle budget.
@@ -398,9 +403,9 @@ A finding whose enumeration turns up no other paths at all is fine as-is, but on
 
 If a gate is open (opened at Step 4c and not yet closed): for every finding whose repro just PASSED against the fixed code, record it with:
 ```
-adze-gate confirm-fix <id>
+prove-it-gate confirm-fix <id>
 ```
-This re-runs the recorded repro itself and refuses to record anything if it still fails -- treat that refusal exactly like a failed rerun above: send the finding back to Step 4d, not around the CLI. `adze-gate close` at Step 5 will refuse while any Confirmed finding is missing a `confirm-fix` record, so do this for every Confirmed finding now rather than deferring it.
+This re-runs the recorded repro itself and refuses to record anything if it still fails -- treat that refusal exactly like a failed rerun above: send the finding back to Step 4d, not around the CLI. `prove-it-gate close` at Step 5 will refuse while any Confirmed finding is missing a `confirm-fix` record, so do this for every Confirmed finding now rather than deferring it.
 
 If no gate is open (CLI not installed): there is nothing to record this in. The repro-verifier's own PASS result above is still what makes the finding eligible for Step 4e and the Step 5 checklist.
 
@@ -455,9 +460,9 @@ Append to task-log: `Promotion complete. {N} promoted, {N} declined. Fail-on-def
 
 If a gate is open (opened at Step 4c and not yet closed): close it now, before showing the checklist below, so the checklist's gate line reflects a real command result rather than a memory of one:
 ```
-adze-gate close
+prove-it-gate close
 ```
-This refuses (non-zero exit, nothing archived) while any Confirmed finding has no recorded `confirm-fix`, and it refuses again while any finding has no Confirmed or Proven-safe verdict at all -- never verified, or still sitting at Inconclusive. Do not tick the gate line below from anything but this command's actual output. A refusal is the same signal as an unrun repro above: go finish Step 4d.5 for the finding(s) it names -- do not reach for `adze-gate override` to clear it.
+This refuses (non-zero exit, nothing archived) while any Confirmed finding has no recorded `confirm-fix`, and it refuses again while any finding has no Confirmed or Proven-safe verdict at all -- never verified, or still sitting at Inconclusive. Do not tick the gate line below from anything but this command's actual output. A refusal is the same signal as an unrun repro above: go finish Step 4d.5 for the finding(s) it names -- do not reach for `prove-it-gate override` to clear it.
 
 If no gate was ever opened (CLI not installed for this session): there is no `close` to run. Tick the gate line below as "not installed" -- that is a valid, honest state, distinct from a gate that ran and failed. The two repro-verify checklist lines above it are unaffected either way; they stay mandatory whether or not a CLI enforced them.
 
@@ -471,7 +476,7 @@ Before committing, show the user this checklist. ALL items must be true:
 - [ ] Findings fixed or explicitly deferred (Step 4d)
 - [ ] Confirm-fix ran (Step 4d.5): every Confirmed finding's own repro was RE-RUN against the fixed code and now PASSES. A green repo test suite does not substitute, those tests did not catch the defect. Any Confirmed finding whose repro was not re-run blocks this gate
 - [ ] Reachability enumerated (Step 4d.5): every Confirmed finding's other paths to the defective behavior were traced and marked covered or not covered. Every NOT COVERED path has a recorded disposition, either fixed-and-reconfirmed or an explicit accepted risk with a stated reason. Any NOT COVERED path with no recorded disposition blocks this gate
-- [ ] Gate CLI: `adze-gate close` succeeded, or the CLI was never installed this session (checked above). This is enforcement bookkeeping on top of the two repro-verify items above, not a substitute for them
+- [ ] Gate CLI: `prove-it-gate close` succeeded, or the CLI was never installed this session (checked above). This is enforcement bookkeeping on top of the two repro-verify items above, not a substitute for them
 - [ ] Every Confirmed-and-fixed finding was promoted to a permanent regression test or explicitly declined with a reason (Step 4e). If you are about to tick this from memory rather than from a report you actually received, it did not run
 - [ ] Verification passed after the latest change
 - [ ] All plan steps implemented
@@ -505,7 +510,7 @@ Quality gate: {N} findings, {N} fixed, {N} deferred
 Verification: all passing
 ```
 
-adze-bonch does not create or review pull requests; that is yours.
+adze-bonch does not create pull requests; that is yours. For a standalone review pass, hand off to prove-it's review entry point: `/prove-it:review` (target defaults to the local diff; pass `--goal` to state intent explicitly). This is a handoff, not a pipeline step -- prove-it review is its own flow, run separately from tackle.
 
 Append to task-log: `Handoff complete.`
 
