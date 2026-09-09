@@ -122,12 +122,12 @@ Repro-Verify is mandatory on every variant below, with no skip conditions, and i
 
 ### Standard
 Full ceremony for complex or risky tasks:
-Research -> Plan -> Test (TDD) -> Implement -> QA Gate (7 reviewers in parallel) -> Repro-Verify -> Fix -> Commit
+Research -> Plan -> Test (TDD) -> Implement -> QA Gate (10 reviewers in parallel) -> Repro-Verify -> Fix -> Commit
 
 ### Lightweight
 For simple bug fixes or small, well-scoped changes:
 Research -> Plan -> Test (TDD) -> Implement -> QA Gate (reduced reviewer set) -> Repro-Verify -> Fix -> Commit
-(Skips Acceptance QA and Edge Case QA)
+(Skips Acceptance QA, Edge Case QA, Contract Review, Security Review, and Doc Vouching Review)
 
 Both orderings above assume the `TDD: yes` default. With `TDD: no`, the test step moves after Implement.
 
@@ -147,7 +147,7 @@ You may be given:
 Use these to inform your recommendation. For example:
 - If past tasks of a similar type needed full QA, recommend standard even if this task looks simple
 - If a learned pattern says "DB migration tasks need full QA", follow it for migration tasks
-- If edge-case-qa previously missed issues in a particular domain, flag that in your output
+- If prove-it:edge-case-qa previously missed issues in a particular domain, flag that in your output
 
 If no history or patterns are provided, rely on the classification signals alone.
 
@@ -212,20 +212,23 @@ Steps:
 1. researcher -- Explore sync handler entry points and event listeners for the affected integration
 2. test-writer -- Write FAILING unit tests (TDD) for the service layer and repository filters against the planned interface
 3. implementer -- Implement plan steps 1-4 (new sync handler, event listeners, repository methods) to green
-4. code-reviewer -- Review all changes for standards compliance [parallel]
-5. acceptance-qa -- Verify all acceptance criteria are met [parallel]
-6. edge-case-qa -- Test failure modes: sync timeout, duplicate events, partial failures [parallel]
-7. code-smells-reviewer -- Flag design smells in the new handler and repository methods [parallel]
-8. test-reviewer -- Check the new tests for hollow assertions and over-mocking [parallel]
-9. self-containment-reviewer -- Check the diff for leaked private context [parallel]
-10. comment-claim-verifier -- Verify falsifiable claims in changed comments and docstrings [parallel]
-11. repro-verifier -- Prove or refute the gate findings, and run the repo's own verification
-12. implementer -- Fix the Confirmed findings from the QA gate
+4. prove-it:code-reviewer -- Review all changes for standards compliance [parallel]
+5. prove-it:acceptance-qa -- Verify all acceptance criteria are met [parallel]
+6. prove-it:edge-case-qa -- Test failure modes: sync timeout, duplicate events, partial failures [parallel]
+7. prove-it:code-smells-reviewer -- Flag design smells in the new handler and repository methods [parallel]
+8. prove-it:test-reviewer -- Check the new tests for hollow assertions and over-mocking [parallel]
+9. prove-it:self-containment-reviewer -- Check the diff for leaked private context [parallel]
+10. prove-it:comment-claim-verifier -- Verify falsifiable claims in changed comments and docstrings [parallel]
+11. prove-it:contract-reviewer -- Check type signatures and API/schema contracts are honored [parallel]
+12. prove-it:security-reviewer -- Hunt exploitable vulnerabilities with concrete attack paths [parallel]
+13. prove-it:doc-vouching-reviewer -- Check consequences a reassuring "vouching" comment omits [parallel]
+14. prove-it:repro-verifier -- Prove or refute the gate findings, and run the repo's own verification
+15. implementer -- Fix the Confirmed findings from the QA gate
 
 Skipped: none
 
 Flags:
-- This task touches async event handlers -- edge-case-qa should focus on race conditions and duplicate processing
+- This task touches async event handlers -- prove-it:edge-case-qa should focus on race conditions and duplicate processing
 - Learned pattern: "event-handler changes always need broad event-path review" (high confidence)
 ```
 

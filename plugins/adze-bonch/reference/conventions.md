@@ -18,9 +18,9 @@ Agents enforce the conventions of the target project, not a fixed ruleset embedd
 
 The orchestrator detects the changed code's language and names the matching overlay in the spawn prompt of the language-sensitive agents.
 
-**Receive an overlay:** implementer, test-writer, code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa. All six ship as language-neutral skeletons, so the overlay is where their language rules come from.
+**Receive an overlay:** implementer, test-writer, plus six `prove-it:` reviewers: `prove-it:code-reviewer`, `prove-it:code-smells-reviewer`, `prove-it:test-reviewer`, `prove-it:edge-case-qa`, `prove-it:contract-reviewer`, `prove-it:security-reviewer`. All eight work from language-neutral skeletons, so the overlay is where their language rules come from.
 
-**Receive none:** acceptance-qa, self-containment-reviewer, comment-claim-verifier, repro-verifier, researcher, scrum-master, pulse-writer. Each reasons about task criteria, private-context leaks, claims-versus-code, or runtime behavior rather than language conventions, so an overlay would add noise without changing its verdict.
+**Receive none:** `prove-it:acceptance-qa`, `prove-it:self-containment-reviewer`, `prove-it:comment-claim-verifier`, `prove-it:doc-vouching-reviewer`, `prove-it:repro-verifier`, researcher, scrum-master, pulse-writer. Each reasons about task criteria, private-context leaks, claims-versus-code, consequence coverage, or runtime behavior rather than language conventions, so an overlay would add noise without changing its verdict.
 
 How the language is detected, and at which step the orchestrator resolves it, is defined once in `seeds/workflow.md` (its language-detection and conventions-overlay-injection section). That seed is the single source of truth for the detection rule; it is deliberately not restated here.
 
@@ -32,7 +32,7 @@ When starting work on any adze task, agents load conventions in this order:
 
 1. **Root CLAUDE.md** of the target repository (the repo being modified). Read it fully using your Read tool.
 2. **Nearest nested CLAUDE.md** relative to the files being changed. "Nearest" means the closest ancestor directory to the changed files that contains a `CLAUDE.md`. If the root is already the closest, read it once (do not double-count).
-3. **The conventions overlay** named on the `Conventions overlay:` line of your spawn prompt, if you are one of the six agents that receives one. Read it and apply it, deferring to the target repo's `CLAUDE.md` wherever both speak to the same thing.
+3. **The conventions overlay** named on the `Conventions overlay:` line of your spawn prompt, if you are one of the eight agents that receives one. Read it and apply it, deferring to the target repo's `CLAUDE.md` wherever both speak to the same thing.
 4. **Adze-side overrides** (session override, project `workflow_overrides`, user profile, canonical default) are resolved by the orchestrator via a lookup chain before your prompt is built. You receive the effective values as injected context in your prompt. You do not call adze to fetch them.
 
 If no `CLAUDE.md` exists in the target repo, the overlay is your baseline, and general good-practice for the detected language and stack covers whatever the overlay leaves open.

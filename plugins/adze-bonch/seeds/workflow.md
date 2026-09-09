@@ -50,9 +50,9 @@ Four types. The scrum-master returns one at Step 0.5:
 
 | Type | When to use | Quality gate |
 |------|-------------|-------------|
-| standard | New feature, bug fix, or anything with tests | 7 reviewers in parallel |
-| lightweight | Small chore, config tweak, or low-risk refactor | 4 or 5 reviewers (test-reviewer only if the changeset includes test files) |
-| docs-only | Documentation update only | code-reviewer + self-containment-reviewer + comment-claim-verifier |
+| standard | New feature, bug fix, or anything with tests | 10 reviewers in parallel |
+| lightweight | Small chore, config tweak, or low-risk refactor | 4 or 5 reviewers (prove-it:test-reviewer only if the changeset includes test files) |
+| docs-only | Documentation update only | prove-it:code-reviewer + prove-it:self-containment-reviewer + prove-it:comment-claim-verifier |
 | custom | Scrum-master specifies the reviewer set | Per scrum-master plan |
 
 `Documentation` and `TDD` are orthogonal flags applied on top of any workflow type. Both default to `yes`. `docs-only` implies `Documentation: yes` and `TDD: no`. See Step 0.5 for the exceptions that justify a `no`.
@@ -92,7 +92,7 @@ The Project Pulse is the per-project session-resume trailhead: the first thing l
 
 ## Language detection and conventions-overlay injection
 
-The implementer, the test-writer, and the language-sensitive reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are language-neutral skeletons. Their language-specific rules come from a **conventions overlay**: a baseline file the orchestrator resolves by detecting the changed code's language, then names in each spawn prompt. The target repo's own committed `CLAUDE.md` stays authoritative over the overlay; the overlay is the baseline underneath it, never a replacement for it.
+The implementer, the test-writer, and the language-sensitive reviewers (prove-it:code-reviewer, prove-it:code-smells-reviewer, prove-it:test-reviewer, prove-it:edge-case-qa, prove-it:contract-reviewer, prove-it:security-reviewer) are language-neutral skeletons. Their language-specific rules come from a **conventions overlay**: a baseline file the orchestrator resolves by detecting the changed code's language, then names in each spawn prompt. The target repo's own committed `CLAUDE.md` stays authoritative over the overlay; the overlay is the baseline underneath it, never a replacement for it.
 
 This section is the single source of truth for the detection rule. `commands/tackle.md` and `reference/agent-prompts.md` both point here rather than restating it; do not re-specify detection anywhere else.
 
@@ -118,9 +118,9 @@ Work from the changed-file list (before one exists, use the plan's file surface)
 
 Paths are relative to the plugin root.
 
-**Gets the overlay:** implementer, test-writer, code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa.
+**Gets the overlay:** implementer, test-writer, prove-it:code-reviewer, prove-it:code-smells-reviewer, prove-it:test-reviewer, prove-it:edge-case-qa, prove-it:contract-reviewer, prove-it:security-reviewer.
 
-**Takes no overlay:** acceptance-qa, self-containment-reviewer, comment-claim-verifier, repro-verifier, researcher, scrum-master, pulse-writer. Each of these reasons about task criteria, private-context leaks, or runtime behavior rather than language conventions, so an overlay would add noise without changing its verdict.
+**Takes no overlay:** prove-it:acceptance-qa, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier, prove-it:doc-vouching-reviewer, prove-it:repro-verifier, researcher, scrum-master, pulse-writer. Each of these reasons about task criteria, private-context leaks, or runtime behavior rather than language conventions, so an overlay would add noise without changing its verdict.
 
 **Adding a language later** means adding one `<lang>-conventions.md` file under `reference/` and one row to the table above. Zero agent edits, zero spawn-template edits.
 
@@ -231,7 +231,7 @@ Once the plan and the Done-condition are locked, execution goes quiet: the user 
 
 1. From the research summary, propose an approach and steps.
 2. Each plan step should be self-contained enough for a sub-agent: exact file path(s), what to change, "done when" condition (per step).
-3. **Derive the task-level Done-condition.** This is distinct from the per-step "done when" above. It is ONE short, explicit statement of what makes the WHOLE task done, read straight off the adze task's acceptance criteria. Keep it lightweight: a short bulleted "Done when:" block, not a spec. This is the single condition acceptance-qa evaluates at Step 4c and the commit gate checks.
+3. **Derive the task-level Done-condition.** This is distinct from the per-step "done when" above. It is ONE short, explicit statement of what makes the WHOLE task done, read straight off the adze task's acceptance criteria. Keep it lightweight: a short bulleted "Done when:" block, not a spec. This is the single condition prove-it:acceptance-qa evaluates at Step 4c and the commit gate checks.
 4. User confirms the plan AND the Done-condition, or adjusts.
 5. Write the approved plan and the "Done when:" block to a `kind:plan` adze doc bound to the task. Echo the same "Done when:" block into the task-log (Step 2 entry) so a post-`/clear` resume re-anchors on it. The `kind:plan` doc is canonical; the task-log copy is a pointer.
 
@@ -242,7 +242,7 @@ Once the plan and the Done-condition are locked, execution goes quiet: the user 
     - {criterion 2}
     - Verification green (lint + typecheck + tests)
 
-**Scale-down for lightweight and docs-only:** collapse the Done-condition to ONE line. For example "Done when: dependency bumped to X.Y and verification green", or "Done when: README section Y documents the new flag and code-reviewer is clean". Do not manufacture a multi-bullet block when the task has a single observable outcome. Note that acceptance-qa does not run on these two workflows, so their Done-condition is evaluated by code-reviewer plus the commit gate rather than by acceptance-qa.
+**Scale-down for lightweight and docs-only:** collapse the Done-condition to ONE line. For example "Done when: dependency bumped to X.Y and verification green", or "Done when: README section Y documents the new flag and prove-it:code-reviewer is clean". Do not manufacture a multi-bullet block when the task has a single observable outcome. Note that prove-it:acceptance-qa does not run on these two workflows, so their Done-condition is evaluated by prove-it:code-reviewer plus the commit gate rather than by prove-it:acceptance-qa.
 
 Append to task-log: `Plan approved. {N} steps. Approach: {1 sentence}. Done when: {1-line restatement or bulleted block}`
 
@@ -318,34 +318,37 @@ Append to task-log: `Step 3.5 tests confirmed green. Verification: {pass/fail}` 
 
 **Never skip this step, even for small changes or when resuming a session.**
 
-**Standard workflow** (spawn all seven in parallel):
-- code-reviewer: reads the repo's CLAUDE.md and enforces its standards
-- acceptance-qa: verifies acceptance criteria from the adze task
-- edge-case-qa: boundary conditions, failure modes
-- code-smells-reviewer: design quality, coupling, duplication
-- test-reviewer: test quality (hollow assertions, over-mocking, bloat)
-- self-containment-reviewer: committed artifacts leak no private or local-only context
-- comment-claim-verifier: falsifiable-claim verification against changed comments and docstrings
+**Standard workflow** (spawn all ten in parallel):
+- prove-it:code-reviewer: reads the repo's CLAUDE.md and enforces its standards
+- prove-it:acceptance-qa: verifies acceptance criteria from the adze task
+- prove-it:edge-case-qa: boundary conditions, failure modes
+- prove-it:code-smells-reviewer: design quality, coupling, duplication
+- prove-it:test-reviewer: test quality (hollow assertions, over-mocking, bloat)
+- prove-it:self-containment-reviewer: committed artifacts leak no private or local-only context
+- prove-it:comment-claim-verifier: falsifiable-claim verification against changed comments and docstrings
+- prove-it:contract-reviewer: type signatures, pre/post-conditions, API/schema contracts honored
+- prove-it:security-reviewer: exploitable vulnerabilities, each finding carrying a concrete attack path
+- prove-it:doc-vouching-reviewer: consequences a reassuring "vouching" comment omits
 
 **Lightweight workflow** (spawn only):
-- code-reviewer
-- code-smells-reviewer
-- test-reviewer (only if the changeset includes test files)
-- self-containment-reviewer
-- comment-claim-verifier
+- prove-it:code-reviewer
+- prove-it:code-smells-reviewer
+- prove-it:test-reviewer (only if the changeset includes test files)
+- prove-it:self-containment-reviewer
+- prove-it:comment-claim-verifier
 
 **Docs-only workflow** (spawn only):
-- code-reviewer (verifies doc changes for accuracy and consistency)
-- self-containment-reviewer
-- comment-claim-verifier
+- prove-it:code-reviewer (verifies doc changes for accuracy and consistency)
+- prove-it:self-containment-reviewer
+- prove-it:comment-claim-verifier
 
 **Custom workflow:** follow the reviewer set the scrum-master included in its WORKFLOW PLAN.
 
-**Conventions overlay (all variants):** inject the overlay resolved at Step 3 into the four language-sensitive reviewers only, code-reviewer, code-smells-reviewer, test-reviewer, and edge-case-qa. If the implementer's changed-file list turned out to span two languages, switch `LANG` to `mixed` here and inject both paths. acceptance-qa, self-containment-reviewer, and comment-claim-verifier take no overlay: they judge task criteria, private-context leaks, or claims-versus-code, none of which is language-specific.
+**Conventions overlay (all variants):** inject the overlay resolved at Step 3 into the six language-sensitive reviewers only: prove-it:code-reviewer, prove-it:code-smells-reviewer, prove-it:test-reviewer, prove-it:edge-case-qa, prove-it:contract-reviewer, and prove-it:security-reviewer. If the implementer's changed-file list turned out to span two languages, switch `LANG` to `mixed` here and inject both paths. prove-it:acceptance-qa, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier, and prove-it:doc-vouching-reviewer take no overlay: they judge task criteria, private-context leaks, claims-versus-code, or vouching-comment omissions, none of which is language-specific.
 
 Consolidate all findings from all reviewers before proceeding. FIRST clear the completion barrier: every dispatched reviewer must have returned a REAL result, not a truncated or empty completion notification. Retrieve any thin result via SendMessage to that agent before consolidating. Do NOT consolidate a partial set; a reviewer whose findings were never read counts as a reviewer that never ran.
 
-Append to task-log: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}. Self-Containment: {N}. Comment Claims: {N}. Total: {N} findings.`
+Append to task-log: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}. Self-Containment: {N}. Comment Claims: {N}. Contract: {N or skipped}. Security: {N or skipped}. Doc Vouching: {N or skipped}. Total: {N} findings.`
 
 ### 4c.5. Repro-Verify (MANDATORY, every workflow)
 
@@ -353,7 +356,7 @@ Append to task-log: `Quality gate complete. Code Review: {N}. Acceptance QA: {pa
 
 An environment blocker (a held port, a missing container, an absent `.env`) is yours to clear, not a reason to skip. If the code genuinely cannot be run after you clear the blocker, STOP and tell the user what is blocking it, rather than passing unverified findings to Step 4d.
 
-- Spawn the `adze-bonch:repro-verifier` agent, seeded with the consolidated correctness and edge-case findings and a scratch dir path.
+- Spawn the `prove-it:repro-verifier` agent, seeded with the consolidated correctness and edge-case findings and a scratch dir path.
 - It writes and runs reproduction scripts in the scratch dir and grounds them by running the repo's own gate commands. It is read-only toward application code and never writes fixes.
 - It returns a REPRO-VERIFIER REPORT with a verdict per finding: **Confirmed** (reproduced), **Proven-safe** (refuted), or **Inconclusive**.
 - It takes no conventions overlay. It judges runtime behavior, not language conventions.
@@ -375,7 +378,7 @@ Append to task-log: `Fix cycle complete. {N} applied, {N} deferred. Verification
 
 **Always run this step, same as 4c.5.** The repo's own test suite going green is not proof a fix worked: that suite was already green while the defect existed, which is why the finding needed a repro in the first place. Only re-running the finding's own repro closes the loop.
 
-- Re-spawn `adze-bonch:repro-verifier` in confirm mode, seeded with every finding Step 4c.5 marked **Confirmed**, each one's repro script, and the Step 4d fix diff.
+- Re-spawn `prove-it:repro-verifier` in confirm mode, seeded with every finding Step 4c.5 marked **Confirmed**, each one's repro script, and the Step 4d fix diff.
 - For each Confirmed finding, it re-runs that finding's own repro against the fixed code. It must now PASS.
 - A fix whose repro still fails is not a fix: it goes back to Step 4d, and counts against the fix-cycle budget. A finding whose repro was never re-run does not reach the commit gate.
 
@@ -409,7 +412,7 @@ When the documentarian ships (Phase 2), this step will spawn it for the priority
 - [ ] Every Confirmed-and-fixed finding was promoted to a permanent regression test or explicitly declined with a reason (Step 4e). If you are about to tick this from memory rather than from a report you actually received, it did not run.
 - [ ] Verification passed after the most recent code change
 - [ ] All plan steps implemented
-- [ ] Done-condition met (the "Done when:" block from the `kind:plan` doc; verified by acceptance-qa on standard, or by code-reviewer plus the orchestrator on lightweight and docs-only where acceptance-qa is skipped)
+- [ ] Done-condition met (the "Done when:" block from the `kind:plan` doc; verified by prove-it:acceptance-qa on standard, or by prove-it:code-reviewer plus the orchestrator on lightweight and docs-only where prove-it:acceptance-qa is skipped)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
 
 Show checklist to user before committing:
@@ -460,7 +463,7 @@ Append to task-log: `Handoff complete.` (or `PR created: {url}`)
 
 **Can parallelize:**
 - Independent plan-step implementations (different files or modules)
-- Quality gate reviewers (all seven in standard workflow)
+- Quality gate reviewers (all ten in standard workflow)
 
 **Must be sequential:**
 Research → Plan → Branch → Test (Step 3.5, TDD red) → Implement → Verify → Review → Repro-Verify → Fix → Verify → Confirm-Fix → Promote → Commit

@@ -10,15 +10,15 @@ Templates for spawning each Phase-1 agent in the adze-bonch tackle workflow. The
 
 The orchestrator's job is to pre-load context so the sub-agent can start producing output on turn 1. Every prompt template here uses `{paste …}` markers; those are NOT optional. The orchestrator pastes the actual content; agents do not "go fetch" anything that could have been inlined.
 
-**Why**: sub-agents like `code-reviewer` have a deterministic ~15-tool-use cap. Exploratory prompts ("read the diff, then review") burn the budget on file reads and terminate with no output. Inline-context prompts ("ALL CODE IS PROVIDED BELOW: do NOT read any files") produce complete output in 0 to 7 tool calls. Same agent, same model; prompt structure is the only difference. The two figures above ARE the A/B result, measured on this plugin's own quality-gate lanes.
+**Why**: sub-agents like `prove-it:code-reviewer` have a deterministic ~15-tool-use cap. Exploratory prompts ("read the diff, then review") burn the budget on file reads and terminate with no output. Inline-context prompts ("ALL CODE IS PROVIDED BELOW: do NOT read any files") produce complete output in 0 to 7 tool calls. Same agent, same model; prompt structure is the only difference. The two figures above ARE the A/B result, measured on this plugin's own quality-gate lanes.
 
 **Apply per agent**:
 - **Researcher**: paste full task title, description, and acceptance criteria inline. The researcher still reads code (that is the job), but never re-fetches the task text.
 - **Implementer**: paste relevant plan steps inline. Never `{see plan doc}`; paste the steps.
 - **Implementer, fix cycle (Step 4d)**: paste the consolidated findings inline as `{INLINED_FINDINGS_WITH_VERDICTS}`, each one carrying the verdict Step 4c.5 gave it (Confirmed / Proven-safe / Inconclusive) so the agent can tell which to fix, which to skip, and which were refuted. Never `{see the quality-gate report}`. Also inline the locked Plan Surface and any addition to it, plus the user's approved and deferred lists; the agent has no adze MCP tools and cannot look any of it up.
 - **Test-writer**: paste file list and 1 to 2 short pattern snippets inline. Never "find an existing test for pattern."
-- **All quality-gate reviewers**: paste full diff and caller bodies. See the substitution recipe below. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` (comments, CLAUDE.md, committed docs, and test/fixture strings) and rarely needs `{INLINED_FUNCTION_BODIES}`. `comment-claim-verifier` similarly starts from `{INLINED_DIFF}` plus the changed-comment surface, but unlike its siblings it is expected to use its Read/Grep/Glob tools to trace a claim's referents outside the diffed hunk; see its own template below.)
-- **Repro-verifier**: paste the consolidated correctness and edge-case findings inline as `{INLINED_FINDINGS}`, and name the scratch dir. It takes no diff (it reads and runs the real code itself) and it is language-neutral.
+- **All quality-gate reviewers**: paste full diff and caller bodies. See the substitution recipe below. (`prove-it:self-containment-reviewer` mainly needs `{INLINED_DIFF}` (comments, CLAUDE.md, committed docs, and test/fixture strings) and rarely needs `{INLINED_FUNCTION_BODIES}`. `prove-it:comment-claim-verifier` similarly starts from `{INLINED_DIFF}` plus the changed-comment surface, but unlike its siblings it is expected to use its Read/Grep/Glob tools to trace a claim's referents outside the diffed hunk; see its own template below.)
+- **Repro-verifier (`prove-it:repro-verifier`)**: paste the consolidated correctness and edge-case findings inline as `{INLINED_FINDINGS}`, and name the scratch dir. It takes no diff (it reads and runs the real code itself) and it is language-neutral.
 
 **Substitution recipe for quality-gate reviewer prompts**:
 
@@ -36,7 +36,7 @@ The orchestrator's job is to pre-load context so the sub-agent can start produci
    **Never pass a bare branch name here.** A local `{base_ref}` is routinely behind its remote, and a fresh worktree inherits that stale ref, so `{base_ref}...HEAD` silently yields a *superset*: files the branch never touched, and pre-existing code presented to reviewers as newly written. Reviewers cannot detect this, and they will report code that shipped tickets ago as this work's design. Sanity check once: if `git rev-parse --short {base_ref}` and `git rev-parse --short origin/{base_ref}` differ, any `{base_ref}...HEAD` diff is wrong. Keep `-M` so a rename reads as a rename rather than a delete plus a spurious "new" file, and tell reviewers in the prompt which files are renames or moves.
 2. For every function in the diff that is shown only partially (context-truncated by the diff format), paste the complete current body as `{INLINED_FUNCTION_BODIES}`.
 3. **MANDATORY on any signature change or rename**: also paste the full bodies of every caller of the changed function, even if those caller files are unchanged in the diff. Reviewers cannot verify a rename landed everywhere without seeing the call sites.
-4. For the `test-reviewer` specifically: include the diff of BOTH the test files AND their corresponding production files. The reviewer must judge whether tests cover real behavior; production code is required context.
+4. For `prove-it:test-reviewer` specifically: include the diff of BOTH the test files AND their corresponding production files. The reviewer must judge whether tests cover real behavior; production code is required context.
 5. If the total diff exceeds 30k tokens, split it into logical chunks (by file or feature area) and spawn parallel reviewer instances, one per chunk. Consolidate the findings before presenting them to the user.
 
 For multi-task workflows with parallel sub-agents, follow the concurrency rules documented in the active adze project context.
@@ -58,7 +58,7 @@ Four flag-words carry a fixed meaning across every agent. A template's return li
 
 A reviewer verifies the code path but never the input. The "verify before you flag" checks each reviewer runs ask whether a guard one level out already defuses the concern; none of them asks whether the triggering input is real. A finding can pass that check honestly and still be worthless, because the reviewer invented the input that triggers it.
 
-Every prompt that asks an agent for findings (`code-reviewer`, `edge-case-qa`, and any future finding-producing agent) carries this block:
+Every prompt that asks an agent for findings (`prove-it:code-reviewer`, `prove-it:edge-case-qa`, and any future finding-producing agent) carries this block:
 
     Input provenance: before promoting any finding whose trigger is a specific input value, name where that value came from: a real sample file in the target repo, an attachment or example on the adze task, an existing test fixture, or something observed in a log, a database row, or a user report. "I constructed it to demonstrate the bug" is not provenance. When that is the honest answer, either find a real instance or report it at the lowest severity phrased as a question. State the provenance inline, one clause ("seen in tests/fixtures/sample-export.xml" or "constructed, no real sample found"). A finding with no provenance clause will be treated as constructed.
 
@@ -70,9 +70,9 @@ This does not stop an agent hunting null, empty, and out-of-order inputs; that i
 
 ## Conventions-Overlay Contract: applies to the language-sensitive prompts
 
-Six agents write or judge code in a specific language, and all six ship as language-neutral skeletons: `implementer`, `test-writer`, `code-reviewer`, `code-smells-reviewer`, `test-reviewer`, `edge-case-qa`. The orchestrator resolves the target repo's language and injects the matching conventions overlay into every one of their spawn prompts.
+Eight agents write or judge code in a specific language, and all eight work from language-neutral skeletons: the two builders `implementer` and `test-writer`, plus six read-only reviewers, all `prove-it:`: `prove-it:code-reviewer`, `prove-it:code-smells-reviewer`, `prove-it:test-reviewer`, `prove-it:edge-case-qa`, `prove-it:contract-reviewer`, `prove-it:security-reviewer`. The orchestrator resolves the target repo's language and injects the matching conventions overlay into every one of their spawn prompts.
 
-The remaining prompts carry **no** overlay, because they reason about task criteria, private-context leaks, claims-versus-code, or runtime behavior rather than language conventions: `acceptance-qa`, `self-containment-reviewer`, `comment-claim-verifier`, `repro-verifier`, `researcher`, `scrum-master`, `pulse-writer`.
+The remaining prompts carry **no** overlay, because they reason about task criteria, private-context leaks, claims-versus-code, consequence coverage, or runtime behavior rather than language conventions: `prove-it:acceptance-qa`, `prove-it:self-containment-reviewer`, `prove-it:comment-claim-verifier`, `prove-it:doc-vouching-reviewer`, `prove-it:repro-verifier`, `researcher`, `scrum-master`, `pulse-writer`.
 
 **Overlay path per language:**
 
@@ -91,7 +91,7 @@ Each qualifying template below carries this block, with `{CONVENTIONS_OVERLAY}` 
 
 When `LANG` is `mixed`, list both paths on the `Conventions overlay:` line and append: each file follows its own language's overlay, so apply the TypeScript rules to `.ts` / `.tsx` / `.js` / `.jsx` files and the Python rules to `.py` files.
 
-**Never spawn one of the six with `{CONVENTIONS_OVERLAY}` unfilled.** Because these agents are language-neutral skeletons, an unfilled token drops the language baseline silently: no error, no visible gap in the output, just an agent working from whatever conventions it guesses.
+**Never spawn one of the eight with `{CONVENTIONS_OVERLAY}` unfilled.** Because these agents are language-neutral skeletons, an unfilled token drops the language baseline silently: no error, no visible gap in the output, just an agent working from whatever conventions it guesses.
 
 Adding a language later is two edits: one new `<lang>-conventions.md` file under `reference/`, and one new row in the path table above. No agent definition and no prompt template changes.
 
@@ -351,7 +351,7 @@ Return your TEST WRITER REPORT (Promote Mode) in the exact structure defined in 
 
 ---
 
-## Code Reviewer Prompt (adze-bonch:code-reviewer)
+## Code Reviewer Prompt (prove-it:code-reviewer)
 
 The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -392,7 +392,7 @@ Return "REVIEW: clean" explicitly if no issues found.
 
 ---
 
-## Acceptance QA Prompt (adze-bonch:acceptance-qa)
+## Acceptance QA Prompt (prove-it:acceptance-qa)
 
 The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -424,7 +424,7 @@ Return "ACCEPTANCE: clean" explicitly if every criterion passes.
 
 ---
 
-## Code Smells Reviewer Prompt (adze-bonch:code-smells-reviewer)
+## Code Smells Reviewer Prompt (prove-it:code-smells-reviewer)
 
 The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -468,7 +468,7 @@ Return "SMELLS: clean" explicitly if no issues found.
 
 ---
 
-## Test Reviewer Prompt (adze-bonch:test-reviewer)
+## Test Reviewer Prompt (prove-it:test-reviewer)
 
 The orchestrator MUST inline the full `git diff` of changed files (BOTH test files AND their corresponding production files; the reviewer needs to judge whether tests cover real behavior) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -509,7 +509,7 @@ Return "TESTS: clean" explicitly if no issues found.
 
 ---
 
-## Edge Case QA Prompt (adze-bonch:edge-case-qa)
+## Edge Case QA Prompt (prove-it:edge-case-qa)
 
 The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -548,7 +548,95 @@ Return "EDGE CASES: clean" explicitly if no issues found.
 
 ---
 
-## Self-Containment Reviewer Prompt (adze-bonch:self-containment-reviewer)
+## Contract Reviewer Prompt (prove-it:contract-reviewer)
+
+Standard-only lane (see the workflow table in `commands/tackle.md`); not spawned on lightweight or docs-only. The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions, plus the full bodies of every caller of a changed signature) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
+
+```
+Review the changes for adze task {TASK_ID} in {WORKSPACE}/{REPO} on branch {BRANCH} for contract violations.
+
+All code is provided below. Do NOT use the Read tool; your context is already complete.
+
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions and their callers (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
+
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay: read it first and defer to it. The overlay is the baseline underneath.
+
+Check that every changed or newly-called signature still honors its contract:
+- Type signatures: parameter and return types match what callers actually pass and consume, including narrowed unions and generics
+- Pre-conditions: what a function assumes true of its inputs before it runs, and whether every call site still satisfies that assumption
+- Post-conditions: what a function guarantees true of its output or side effects, and whether the change still delivers it
+- API and schema contracts: request/response shapes, serialization formats, and public interfaces a consumer outside this diff depends on
+
+Input provenance: before promoting any finding whose trigger is a specific input value, name where that value came from: a real sample file in the repo, an example on the adze task, an existing test fixture, or something observed in a log, a database row, or a user report. "I constructed it to demonstrate the bug" is not provenance. State the provenance inline, one clause. A finding with no provenance clause will be treated as constructed.
+
+Return only actionable findings. For each:
+- File and line number
+- The contract violated (signature, pre-condition, post-condition, or API/schema)
+- Suggested fix
+- Severity: critical / warning / nit
+
+Mark systemic issues as [GOVERNANCE].
+Mark as [UNVERIFIED] any claim you assert from recall rather than from the code above, such as a library's type contract or an API's documented shape.
+Return "CONTRACTS: clean" explicitly if no issues found.
+```
+
+---
+
+## Security Reviewer Prompt (prove-it:security-reviewer)
+
+Standard-only lane (see the workflow table in `commands/tackle.md`); not spawned on lightweight or docs-only. The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
+
+```
+Review the changes for adze task {TASK_ID} in {WORKSPACE}/{REPO} on branch {BRANCH} for exploitable vulnerabilities.
+
+All code is provided below. Do NOT use the Read tool; your context is already complete.
+
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
+
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay: read it first and defer to it. The overlay is the baseline underneath.
+
+Every finding must carry a concrete attack path: who the attacker is, what they control, and the exact sequence that reaches the vulnerable code from an untrusted input. A theoretical weakness with no reachable trigger is a nit, not a vulnerability; say so and demote it.
+
+Look for:
+- Injection (SQL, command, template, log) wherever untrusted input reaches an interpreter
+- Broken or missing authentication and authorization checks on a changed path
+- Sensitive data exposure: secrets, tokens, or PII logged, cached, or returned where they should not be
+- Deserialization of untrusted input, SSRF, and path traversal
+- Cryptographic misuse: weak algorithms, hardcoded keys, missing verification
+
+Input provenance: before promoting any finding whose attack path depends on a specific input value, name where an attacker could realistically supply it (a public endpoint, a user-controlled field, an upstream integration). "I constructed it to demonstrate the bug" is not provenance. State the provenance inline, one clause.
+
+Return only actionable findings. For each:
+- File and line number
+- The vulnerability class
+- The concrete attack path
+- Suggested fix
+- Severity: critical / warning / nit
+
+Mark systemic issues as [GOVERNANCE].
+Mark as [UNVERIFIED] any claim you assert from recall rather than from the code above, such as a library's documented security guarantee.
+Return "SECURITY: clean" explicitly if no issues found.
+```
+
+---
+
+## Self-Containment Reviewer Prompt (prove-it:self-containment-reviewer)
 
 The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning. This reviewer reads the literal text of changed comments, CLAUDE.md entries, committed docs, and test/fixture strings; `{INLINED_DIFF}` is the load-bearing input. `{INLINED_FUNCTION_BODIES}` is usually unnecessary here (the leak is in the changed text itself, not in surrounding logic); set it to `(none: leak review reads the diff text directly)` unless a changed comment refers to nearby code whose meaning the rewrite needs. Do NOT pass file lists and expect the agent to Read them. That pattern burns the agent's tool-use budget on file reads and produces no output before the budget is exhausted. See the Inline-Context Contract at the top of this file.
 
@@ -585,7 +673,7 @@ Return "SELF-CONTAINMENT: clean" explicitly if no leaks found.
 
 ---
 
-## Comment Claim Verifier Prompt (adze-bonch:comment-claim-verifier)
+## Comment Claim Verifier Prompt (prove-it:comment-claim-verifier)
 
 The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning, plus the changed comments/docstrings and the code they sit beside. Unlike its sibling reviewers, this agent is NOT told to avoid its Read/Grep/Glob tools: it is expected to use them to trace a claim's referents (an assignment site, a guard, a caller, a definition) beyond the diffed hunk, chasing a specific extracted claim rather than re-discovering what changed. See the Inline-Context Contract at the top of this file, and `agents/comment-claim-verifier.md` (Verification Method), for why this lane's traversal license differs from the others: for most reviewers, reading past the diff is a rare fallback; for this one it is the routine, load-bearing mechanism.
 
@@ -614,7 +702,38 @@ Mark systemic patterns as [GOVERNANCE]. Mark as [UNVERIFIED], in the same output
 
 ---
 
-## Repro-Verifier Prompt (adze-bonch:repro-verifier)
+## Doc-Vouching Reviewer Prompt (prove-it:doc-vouching-reviewer)
+
+Standard-only lane (see the workflow table in `commands/tackle.md`); not spawned on lightweight or docs-only. The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning. This reviewer reads the literal text of changed "vouching" comments (comments that reassure a reader the code is safe, correct, or already handled) against the code they sit beside; `{INLINED_DIFF}` is the load-bearing input. Do NOT pass file lists and expect the agent to Read them. See the Inline-Context Contract at the top of this file.
+
+```
+Review the changes for adze task {TASK_ID} in {WORKSPACE}/{REPO} on branch {BRANCH} for consequences a reassuring comment omits.
+
+All code is provided below. Do NOT use the Read tool; your context is already complete.
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
+
+Find every changed or newly-added comment that vouches for the code near it: "safe because...", "this is fine since...", "already validated", "cannot happen", "handled upstream", or any comment whose job is to reassure the reader rather than describe behavior. For each, name the consequence it does NOT mention: the case the vouching comment's own reasoning does not cover, and that a reader who trusts the comment would miss.
+
+Do NOT re-litigate whether the comment's stated reasoning is itself correct; that is `prove-it:comment-claim-verifier`'s job. This lane asks only what the comment leaves out.
+
+Return only actionable findings. For each:
+- File and line number
+- The vouching comment's exact text
+- The consequence it omits, and who suffers it (a caller, a future editor, an end user)
+- Severity: critical / warning / nit
+
+Mark systemic patterns as [GOVERNANCE].
+Return "DOC-VOUCHING: clean" explicitly if no vouching comments with an omitted consequence were found.
+```
+
+---
+
+## Repro-Verifier Prompt (prove-it:repro-verifier)
 
 Language-neutral, and MANDATORY on every workflow that runs a quality gate. There are no skip conditions: the static reviewers produce plausible-but-false findings, and the implementer should never be sent to chase one that nobody tried to trigger.
 
