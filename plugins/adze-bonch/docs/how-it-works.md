@@ -115,8 +115,8 @@ flowchart TD
     D --> E["Create the branch"]
     E --> F["Write failing tests first (TDD default)"]
     F --> G["Implementer takes the tests green"]
-    G --> H["Quality gate: reviewers run in parallel"]
-    H --> I["Repro-verifier proves each finding"]
+    G --> H["Quality gate: prove-it's reviewers run in parallel"]
+    H --> I["prove-it's repro-verifier proves each finding"]
     I -->|Confirmed| J["Fix"]
     I -->|Proven-safe| K["Drop, no fix cycle spent"]
     J --> L["Confirm-fix: re-run the finding's own repro"]
@@ -279,8 +279,11 @@ than the change is, showing them other people's committed code as if it were
 newly written. Renames are kept as renames so a moved file does not read as a
 deletion plus a suspicious new file.
 
-Then reviewers run at the same time, each one reading the full diff pasted into
-its instructions. On a standard workflow there are seven:
+None of the reviewers live in adze-bonch. They are `prove-it:*` agents, owned
+and shipped by the separate **prove-it** plugin, a required companion for this
+stage to run at all; tackle dispatches them and reads their reports, each one
+reading the full diff pasted into its instructions. On a standard workflow
+there are ten:
 
 - **code-reviewer** -- the changed files against the repo's own conventions.
 - **acceptance-qa** -- does this actually meet the task's acceptance criteria.
@@ -291,14 +294,22 @@ its instructions. On a standard workflow there are seven:
   local scratch paths, internal shorthand, or session-only references.
 - **comment-claim-verifier** -- takes every falsifiable claim in changed comments
   and docstrings and checks it against the code by tracing what it refers to.
+- **contract-reviewer** -- type signatures, pre/post-conditions, API and schema
+  contracts honored.
+- **security-reviewer** -- exploitable vulnerabilities, each finding carrying a
+  concrete attack path.
+- **doc-vouching-reviewer** -- consequences a reassuring "vouching" comment
+  omits.
 
 Lightweight runs four or five of these, docs-only runs three, custom runs
 whatever the routing agent specified. Findings are then merged, deduplicated by
 file and line, keeping the higher severity when two reviewers hit the same spot.
-Per-agent detail is in [`agents-guide.md`](agents-guide.md).
+A card on each reviewer lives in prove-it's own documentation; adze-bonch's
+[`agents-guide.md`](agents-guide.md) covers only its own five agents plus a
+pointer to prove-it.
 
 *Why this stage exists as a group rather than one reviewer:* these are different
-reading modes, and one agent asked to do all seven does none of them well. They
+reading modes, and one agent asked to do all ten does none of them well. They
 run at the same time because they do not depend on each other.
 
 </details>
@@ -306,10 +317,10 @@ run at the same time because they do not depend on each other.
 <details>
 <summary><b>Proving the findings by running code</b> - Confirmed, Proven-safe, or Inconclusive per finding</summary>
 
-Now the important part. Every finding goes to the `repro-verifier`, which is
-read-only over your code but has a durable scratch directory of its own, outside
-the repo, that survives sessions and reboots, because the script written there
-may need to run again later from a different session.
+Now the important part. Every finding goes to prove-it's `repro-verifier`,
+which is read-only over your code but has a durable scratch directory of its
+own, outside the repo, that survives sessions and reboots, because the script
+written there may need to run again later from a different session.
 
 For each finding it writes and runs a reproduction script and returns one of
 three verdicts:
@@ -320,9 +331,10 @@ three verdicts:
 - **Inconclusive** -- could not be settled either way. You are told, and you
   decide whether to fix it anyway.
 
-If the optional `adze-gate` tool is installed it does not take the verdict on
-faith: it executes the script itself rather than trusting the report, requiring
-a Confirmed finding's script to exit non-zero and a Proven-safe one to exit zero.
+If the optional `prove-it-gate` tool is installed it does not take the verdict
+on faith: it executes the script itself rather than trusting the report,
+requiring a Confirmed finding's script to exit non-zero and a Proven-safe one
+to exit zero.
 
 It also runs the target repo's own checks. If it reports that it could not run
 something, that is the main assistant's problem to clear, not a reason to skip:
@@ -353,9 +365,9 @@ reproduction script in the first place.
 <details>
 <summary><b>Proving the fix</b> - re-run each finding's own script, and enumerate every other path</summary>
 
-Also mandatory, also never skipped. For every finding that was Confirmed, the
-`repro-verifier` runs **that finding's own script again** against the fixed
-code, and it must now pass. The earlier step proved the defect by making a
+Also mandatory, also never skipped. For every finding that was Confirmed,
+prove-it's `repro-verifier` runs **that finding's own script again** against
+the fixed code, and it must now pass. The earlier step proved the defect by making a
 script fail; this step closes the loop with the same script. A red that is never
 taken green is half a test.
 
@@ -516,25 +528,25 @@ into a confident, wrong answer when a single lookup would have settled it.
 
 ## 5. What it will not do for you
 
-**The edit-blocking check only sees the main session's own edits.** The optional
-`gate-check.sh` hook blocks `Edit`, `Write`, `MultiEdit`, and `NotebookEdit` in
-the session it is registered for while findings are unverified. It does not
-constrain a sub-agent's tool calls at all, and it does not see anything done
-through a shell command -- a `sed -i` or a heredoc write sails straight past it.
-It is a discipline aid for the main driver. It is not a sandbox and cannot be
-used as one.
+**The edit-blocking check only sees the main session's own edits.** adze-bonch
+does not ship this hook itself. The optional enforcement hook that makes it
+binding comes from the companion prove-it plugin, and it blocks `Edit`,
+`Write`, `MultiEdit`, and `NotebookEdit` in the session it is registered for
+while findings are unverified. It does not constrain a sub-agent's tool calls
+at all, and it does not see anything done through a shell command -- a
+`sed -i` or a heredoc write sails straight past it. It is a discipline aid for
+the main driver. It is not a sandbox and cannot be used as one.
 
-**It also fails open on purpose.** Missing `jq`, malformed state, or any
-unexpected error lets the edit through. It must never be the reason ordinary
-editing gets stuck. Same for its file locking: if `flock` is not available
-(notably on stock macOS) or the lock cannot be taken within two seconds, it
-proceeds without the lock rather than hang.
+**It also fails open on purpose.** Missing dependencies, malformed state, or
+any unexpected error lets the edit through. It must never be the reason
+ordinary editing gets stuck.
 
-**The enforcement tooling is opt-in and defaults to off.** `adze-gate` and its
-hook are installed only if you opt in during setup, which defaults to off.
-When it is absent, the verification steps are still mandatory -- they are just
-not mechanically blocking anything while they happen. The tool is the
-enforcement of the discipline, not the discipline.
+**The enforcement tooling is opt-in and defaults to off.** `prove-it-gate` and
+its hook are installed only if you opt in, via `/prove-it:setup`, which
+`/adze-bonch:setup` points you to and which defaults to off. When it is
+absent, the verification steps are still mandatory -- they are just not
+mechanically blocking anything while they happen. The tool is the enforcement
+of the discipline, not the discipline.
 
 **Everything depends on adze being set up.** No reachable MCP server and setup
 stops at step one. No discipline document and `/adze-bonch:main` halts and tells
@@ -552,7 +564,9 @@ for your confirmation, then restores file by file. It is explicitly not
 authorized to reach for `git reset --hard` or `git clean -f`.
 
 **It never pushes, and it does not review pull requests.** Commit is the last
-thing it does. Pushing is yours, and pull request review is yours.
+thing it does. Pushing is yours, and so is pull request review; the companion
+prove-it plugin's `/prove-it:review` runs a standalone pass over any diff if
+you want one, separately from tackle.
 
 **Several flows are not built.** Brainstorm, refine, and verify are named in the
 routing table and are not shipped; for a new project you call adze directly. The
@@ -566,10 +580,11 @@ nothing mechanically stops a line being ticked from memory. The source pushes
 back on this in the only way text can, by saying so on the checklist itself, but
 it is worth knowing where the real boundary is.
 
-**Reviewers judge; they do not run.** Six of the seven cannot execute anything.
-Only the reproduction verifier runs code, and only after the reviewers are done.
-A finding that only execution can settle is marked as such and handed onward,
-not resolved by reading.
+**Reviewers judge; they do not run.** Ten of the eleven `prove-it:*` agents
+dispatched at the gate cannot execute anything. Only prove-it's repro-verifier
+runs code, and only after the reviewers are done. A finding that only
+execution can settle is marked as such and handed onward, not resolved by
+reading.
 
 **One Pulse per project, or it stops.** If more than one `kind:pulse` document is
 attached to a project, `/adze-bonch:main` and `/adze-bonch:status` halt and ask

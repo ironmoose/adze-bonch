@@ -48,15 +48,19 @@ Everything depends on adze. Clone [`4lt7ab/adze`](https://github.com/4lt7ab/adze
 
 With no reachable server, setup stops at step one.
 
+### Prerequisite: the prove-it plugin
+
+`/adze-bonch:tackle`'s quality gate is not self-contained: its reviewers and its repro-verifier are `prove-it:*` agents, so the gate cannot run at all until the **prove-it** plugin is installed alongside adze-bonch. Install it the same way you installed this plugin, then optionally run `/prove-it:setup` for its enforcement hook.
+
 ## Agents
 
-`/adze-bonch:tackle` runs 12 specialized agents through the lifecycle (a 13th, `pulse-writer`, drafts the Pulse outside tackle). Ten are read-only; only the implementer and test-writer touch your code, and only the repro-verifier runs it. One card per agent, including what each one is blind to, is in [`docs/agents-guide.md`](docs/agents-guide.md). The step-by-step lifecycle is in [`docs/how-it-works.md`](docs/how-it-works.md) section 3.
+adze-bonch ships five agents: `scrum-master` routes the workflow, `researcher` reads the target repo before planning, `test-writer` and `implementer` are the only two that touch your code, and `pulse-writer` drafts the Pulse outside tackle. `/adze-bonch:tackle`'s quality gate dispatches ten read-only reviewers plus a repro-verifier that proves every finding by running code, all owned by the companion prove-it plugin, not this one. One card per adze-bonch agent, and a pointer to prove-it's reviewers, is in [`docs/agents-guide.md`](docs/agents-guide.md). The step-by-step lifecycle is in [`docs/how-it-works.md`](docs/how-it-works.md) section 3.
 
 ## What it will NOT do
 
 - **No isolated copy of your repo.** Every step works in your real working tree on your real branch, so a run that goes wrong leaves partial edits behind. It shows you the diff and restores file by file; it never reaches for `git reset --hard` or `git clean`.
-- **It never pushes, and it does not review pull requests.** Commit is the last thing it does; pushing and pull request review are yours.
-- **Enforcement is opt-in and fails open.** The edit-blocking hook is installed only if you say yes at setup, sees only the main session's own edits, and lets edits through on any error. The verification steps are mandatory regardless; the hook is not a sandbox.
+- **It never pushes, and it does not review pull requests.** Commit is the last thing it does; pushing is yours, and a standalone review pass is `/prove-it:review` when you want one.
+- **Enforcement is opt-in and fails open.** The edit-blocking hook ships with the companion prove-it plugin, is installed only if you opt in, sees only the main session's own edits, and lets edits through on any error. The verification steps are mandatory regardless; the hook is not a sandbox.
 - **Several flows are not built.** brainstorm, refine, and verify are named in the routing table but not shipped; create adze projects directly for now.
 
 The full list, with the reasoning behind each, is in [`docs/how-it-works.md`](docs/how-it-works.md) section 5.
