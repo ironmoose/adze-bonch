@@ -53,11 +53,14 @@ discoverability_installed_at: []
 session_hook_scope: null          # "project" | "global" | null
 session_hook_installed_at: null   # absolute path to settings.json, or null
 
-# Quality-gate enforcement hook: set after Step 6.5 of setup (null if skipped).
-# No "project" scope exists here: adze-gate and gate-check.sh both hardcode
-# their state directory to ~/.claude/adze-bonch/, so the hook is global-only.
-quality_gate_scope: null          # "global" | null
-quality_gate_installed_at: null   # absolute path to settings.json, or null
+# Quality-gate enforcement hook: no longer installed by adze-bonch. The gate
+# (prove-it-gate CLI + its PreToolUse hook) is now provided by the separate
+# prove-it plugin, installed via that plugin's own /prove-it:setup wizard and
+# tracked in prove-it's own state, not here. These two fields are permanently
+# unpopulated by adze-bonch; they are kept only so older bootstrap-state docs
+# written before this change still parse under the same schema.
+quality_gate_scope: null          # always null; not populated by adze-bonch
+quality_gate_installed_at: null   # always null; not populated by adze-bonch
 ---
 ```
 
@@ -77,7 +80,7 @@ This doc is read by `/adze-bonch:setup` and `/adze-bonch:main` to know what's be
 - **Resume on partial install.** Empty fields tell setup which step to start from.
 - **Discipline doc resolution.** `/adze-bonch:main` Step 0 reads `canonical_seeds` to find the discipline doc id directly, no search needed.
 - **SessionStart hook detection.** `session_hook_scope` and `session_hook_installed_at` tell setup whether the hook is already installed, preventing duplicate installs on re-run.
-- **Quality-gate hook detection.** `quality_gate_scope` and `quality_gate_installed_at` tell setup whether the `PreToolUse` gate hook is already installed, preventing duplicate installs on re-run.
+- **Quality-gate fields (legacy, unused).** `quality_gate_scope` and `quality_gate_installed_at` are always null. adze-bonch no longer installs a gate hook; that install now lives in the prove-it plugin's own state, reached via `/prove-it:setup`.
 
 ## When this doc gets updated
 
