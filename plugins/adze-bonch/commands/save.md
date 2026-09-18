@@ -52,10 +52,12 @@ Decisions surfaced from recent turns:
 
   ...
 
-Capture which? (all / numbers like '1,3' / none)
+Capture which? (all [default -- press enter] / numbers like '1,3' / none)
 ```
 
 Wait for input.
+
+**Default is ALL.** An empty/blank answer (or "all") captures every surfaced item -- this user always captures all. Only a subset ('1,3') or the literal 'none' narrows it.
 
 If `none`: print "Skipped. Nothing written." Stop.
 
