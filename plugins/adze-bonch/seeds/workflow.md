@@ -102,10 +102,12 @@ This section is the single source of truth for the detection rule. `commands/tac
 
 Work from the changed-file list (before one exists, use the plan's file surface), skipping test fixtures and binaries:
 
-1. **By extension:** any `.ts` / `.tsx` / `.js` / `.jsx` means TypeScript; any `.py` means Python.
-2. **Confirm or tiebreak on the target repo's own project markers:** `package.json` or `tsconfig.json` means TypeScript; `pyproject.toml`, `setup.py`, or `requirements.txt` means Python.
-3. **Mixed:** if both a TypeScript-family extension and `.py` are present, `LANG = mixed`.
-4. **Neither:** if the language is neither TypeScript nor Python, there is no overlay. Say so explicitly in the spawn prompt, and the agents fall back to the target repo's own `CLAUDE.md` plus general good practice for the detected stack. Never invent an overlay path that does not exist.
+1. **By extension:** any `.ts` / `.tsx` / `.js` / `.jsx` means TypeScript; any `.py` means Python; any `.lua` means Lua.
+2. **Confirm or tiebreak on the target repo's own project markers:** `package.json` or `tsconfig.json` means TypeScript; `pyproject.toml`, `setup.py`, or `requirements.txt` means Python; `.luacheckrc`, a `.rockspec`, or a `.toc` addon manifest means Lua.
+3. **Mixed:** if more than one of those families is present, `LANG = mixed` and every applicable overlay is injected.
+4. **Neither:** if the language is none of the three, there is no overlay. Say so explicitly in the spawn prompt, and the agents fall back to the target repo's own `CLAUDE.md` plus general good practice for the detected stack. Never invent an overlay path that does not exist.
+
+**For Lua, also state the target Lua VERSION in the spawn prompt** when the repo makes it knowable: a `.toc` interface number, a `.rockspec` dependency, or a bundled LuaJIT. 5.1, 5.3 and 5.4 differ in ways that decide whether code is correct (integer subtype, `goto`, `_ENV` versus `setfenv`, `//`, bitwise operators), and an embedded host is usually pinned to an old one. If it cannot be determined, say so rather than letting an agent assume the newest.
 
 ### Overlay path per `LANG`
 
@@ -113,6 +115,7 @@ Work from the changed-file list (before one exists, use the plan's file surface)
 |--------|------------------------|
 | TypeScript | `reference/typescript-conventions.md` |
 | Python | `reference/python-conventions.md` |
+| Lua | `reference/lua-conventions.md` |
 | mixed | both of the above |
 | anything else | none; state "no overlay" in the spawn prompt |
 

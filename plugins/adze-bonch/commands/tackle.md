@@ -195,7 +195,7 @@ git -C <repo-path> switch -c <kebab-from-task-title>
 
 If the branch already exists (resuming a prior session): `git -C <repo-path> switch <branch>` (no `-c`). Confirm with the user before reusing a branch that has unpublished commits.
 
-**Resolve `LANG` and the conventions overlay here.** The target repo is known now, so detect the language and pick the overlay path or paths using the detection rule in `seeds/workflow.md` (Language detection and conventions-overlay injection), which is its single source of truth. Carry the resolved path or paths into the Step 3.5, Step 4a, and Step 4c spawns. Resolving at this step, not after implementation, is what gets the overlay to the test-writer and the implementer rather than only to the reviewers. If the language is neither TypeScript nor Python, there is no overlay: say so explicitly in each spawn prompt instead of naming a path that does not exist.
+**Resolve `LANG` and the conventions overlay here.** The target repo is known now, so detect the language and pick the overlay path or paths using the detection rule in `seeds/workflow.md` (Language detection and conventions-overlay injection), which is its single source of truth. Carry the resolved path or paths into the Step 3.5, Step 4a, and Step 4c spawns. Resolving at this step, not after implementation, is what gets the overlay to the test-writer and the implementer rather than only to the reviewers. If the language is none of TypeScript, Python or Lua, there is no overlay: say so explicitly in each spawn prompt instead of naming a path that does not exist.
 
 Append to task-log: `Branch: {branch-name}. LANG: {typescript|python|mixed|none}.`
 
