@@ -110,11 +110,19 @@ Per D18, every save refreshes the Project Pulse: a per-project resume trailhead,
 
    Wait for input. For each accepted item, call `mcp__adze__tasks_create({ project_id, title, context: body })` and print `wrote: task -> {id}`. This closes the loop: excess becomes tasks, not pulse bloat.
 
-## Step 4: Append to Session Progress Log
+## Step 4: Append to the Session Progress Log
 
-After all writes, find or create the project's "Session Progress Log" doc (search by title under the project, tag `kind:session-log`). Append a dated entry summarizing what was captured this turn.
+After all writes, append a dated entry to the project's ONE canonical "Session Progress Log" doc, summarizing what was captured this turn. This append is synchronous, not background.
 
-This append is also synchronous, not background.
+1. **Find the canonical doc.** Resolve the `kind:session-log` tag id (`tags_list`), list its docs (`documents_list`), and cross-check attachment with `documents_for_project`; the session log is the doc present in both sets whose title is "Session Progress Log". If more than one `kind:session-log` doc is attached to this project and not yet merged, HALT and ask which is canonical (the one-per-project rule that tag exists to enforce). If none exists, `documents_create` it (tags `kind:session-log` and `provenance:user`) with this turn's dated entry as its body, then `documents_attach`, and you are done with this step.
+
+2. **Append with `documents_append`, never a full-body rewrite.** Call `mcp__adze__documents_append({ id, text })`. It concatenates `text` onto the doc server-side and returns a lean summary (id, appended_chars, context_length, updated_at) without echoing the body, so it neither risks a hand-retype of a long archive nor blows the tool-result token cap. The append is VERBATIM with no separator inserted, so `text` MUST begin with its own blank-line separator and a dated H2 header, for example: `"\n\n## <YYYY-MM-DD> (<one-line session theme>)\n\n- <what was captured> ..."`. Empty `text` is rejected, so never call it with nothing.
+
+3. **Do NOT create a continuation or fragment doc.** The reason fragments used to accumulate, that `documents_update` replaces the whole body so appending to a long log meant retyping it, is exactly what `documents_append` removes. Append to the single canonical doc every time.
+
+4. **Print** `wrote: session-log -> {id}`.
+
+**Fallback when `documents_append` is unavailable** (an older adze-mcp server that does not expose the tool): `documents_get` the doc, then `documents_update` it with the full existing body plus the new entry appended (concurrency is strict: re-read if the last read was over 60s ago). This legacy path is a full-body rewrite; use it only when `documents_append` genuinely is not present, and prefer the append tool whenever it exists.
 
 ## Hard Rules
 

@@ -29,7 +29,7 @@ This file is loaded by Claude Code on session start in `~/workspaces/marketplace
 2. **No em-dashes in new prose.** Parker considers them an AI tell. Use commas, semicolons, parentheses, or simple periods.
 3. **Adze upstream commits use the captain's-log voice.** "I [verb] ..." with nautical imagery; Jacob's house style. Plugin-internal commits use conventional plain English.
 4. **Tags only attach to documents in adze.** Projects and tasks cannot be tagged. Do not write code that depends on `projects_add_tag` or `tasks_add_tag` (they do not exist). See D16, D17 for the full implications.
-5. **Adze MCP `documents_update` and `projects_update` fully replace `context`.** No patching, no merging. Always re-read before writing if the last read is >60s old (D4 concurrency rule).
+5. **Adze MCP `documents_update` and `projects_update` fully replace `context`.** No patching, no merging. Always re-read before writing if the last read is >60s old (D4 concurrency rule). EXCEPTION for append-only content (the Session Progress Log): prefer `documents_append({ id, text })`, which concatenates server-side and returns a lean summary instead of the whole body. It requires an adze-mcp new enough to expose the tool, so `/adze-bonch:save` Step 4 falls back to a full-body `documents_update` when it is absent.
 
 ## Setup wizard shape (per D14 + D17)
 
@@ -124,7 +124,7 @@ Plus four named protocols: `[GOVERNANCE]`, `[PLAN-TEST-CONFLICT]`, `[SCOPE-EXPAN
 
 Reads: `projects_list`, `projects_get`, `projects_brief`, `tasks_list`, `tasks_get`, `documents_list`, `documents_get`, `documents_for_project`, `search`, `tags_list`.
 
-Writes: `projects_create`, `projects_update`, `tasks_create`, `tasks_create_many`, `tasks_update`, `documents_create`, `documents_update`, `documents_attach`, `documents_add_tag`, `tags_create`.
+Writes: `projects_create`, `projects_update`, `tasks_create`, `tasks_create_many`, `tasks_update`, `documents_create`, `documents_update`, `documents_append`, `documents_attach`, `documents_add_tag`, `tags_create`.
 
 ## On session start in this directory
 
