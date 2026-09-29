@@ -1,6 +1,6 @@
 # Agent index
 
-This directory holds the agent definition files for the `adze-bonch` tackle lifecycle. adze-bonch ships five agents, listed below in tackle pipeline order (`scrum-master` routes first; `pulse-writer` sits outside the pipeline).
+The `agents/` directory holds the agent definition files for the `adze-bonch` tackle lifecycle. adze-bonch ships five agents, listed below in tackle pipeline order (`scrum-master` routes first; `pulse-writer` sits outside the pipeline). This index lives in docs/ rather than agents/ because Claude Code registers every .md file in agents/ as an agent.
 
 The Step 4c quality gate reviewers and the Step 4c.5/4d.5 repro-verifier are **not** adze-bonch agents. They are dispatched as `prove-it:*` agents from the required companion `prove-it` plugin (10 reviewers on standard, plus `prove-it:repro-verifier`). See `CLAUDE.md`'s Agent roster section for the full `prove-it:*` list and the reasoning behind the relink.
 
@@ -10,7 +10,7 @@ The Step 4c quality gate reviewers and the Step 4c.5/4d.5 repro-verifier are **n
 
 It is a read-only advisor: it analyzes tasks, context, and history, then returns a structured workflow plan. It does not execute the plan; the orchestrator does.
 
-File: [`scrum-master.md`](scrum-master.md)
+File: [`scrum-master.md`](../agents/scrum-master.md)
 
 ## researcher
 
@@ -18,7 +18,7 @@ File: [`scrum-master.md`](scrum-master.md)
 
 It is read-only: it explores code, traces dependencies, and produces structured research summaries. It never modifies files of any kind.
 
-File: [`researcher.md`](researcher.md)
+File: [`researcher.md`](../agents/researcher.md)
 
 ## implementer
 
@@ -26,7 +26,7 @@ File: [`researcher.md`](researcher.md)
 
 It executes approved plans precisely, directly in the target repo's working tree, and reports what it actually did with full honesty, including every place it deviated from the plan. It does not silently re-architect, does not rewrite implementations to fit tests, and does not expand scope. It is the sole agent that writes implementation code.
 
-File: [`implementer.md`](implementer.md)
+File: [`implementer.md`](../agents/implementer.md)
 
 ## test-writer
 
@@ -34,7 +34,7 @@ File: [`implementer.md`](implementer.md)
 
 It follows each repo's established test patterns exactly, does not invent new patterns or deviate from conventions, and runs targeted tests to confirm they pass before returning results.
 
-File: [`test-writer.md`](test-writer.md)
+File: [`test-writer.md`](../agents/test-writer.md)
 
 ## pulse-writer
 
@@ -42,4 +42,4 @@ File: [`test-writer.md`](test-writer.md)
 
 It drafts a project's Pulse doc: the single short note a future agent reads first when re-entering a project, so it knows where work left off and what to do next. It is read-only. It drafts the three sections and returns them; it does not write to adze itself, the orchestrator confirms the draft with the user and persists it.
 
-File: [`pulse-writer.md`](pulse-writer.md)
+File: [`pulse-writer.md`](../agents/pulse-writer.md)
