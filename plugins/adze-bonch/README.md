@@ -1,28 +1,39 @@
 # adze-bonch
 
-Two commands for [adze](https://github.com/4lt7ab/adze) projects. The workflow orchestration that used to live here (main, tackle, setup, their agents, hooks, discipline seeds, and Codex adapters) was retired in 0.8.0.
+A Claude Code plugin that adds workflow discipline to [adze](https://github.com/4lt7ab/adze) projects: it captures decisions as they are made, resumes a project from a saved trailhead, and runs coding tasks through a lifecycle that proves every review finding by reproduction before fixing it, then re-proves it after.
+
+## What it is
+
+adze-bonch sits on top of adze, a local project tracker Claude reaches through an MCP server. Because adze is a real store rather than chat history, what the plugin writes there is still readable next week, in a new session, by a different Claude.
+
+It exists to fix three failure modes that show up in real work:
+
+- **Decisions evaporate.** `/adze-bonch:save` writes decisions to adze the moment they are made, not in a batch at the end that never happens.
+- **Reviews produce plausible fiction.** In the tackle lifecycle a finding is not real until a script has reproduced it against your actual code. Confident review text that no script can reproduce is dropped, not fixed.
+- **Fixes are declared done without proof.** The same script that proved the bug is run again after the fix and must pass. A green test suite does not count: it was already green while the bug existed.
 
 ## Commands
 
 | Command | What it does |
 |---------|--------------|
-| `/adze-bonch:save` | Audits recent turns for decisions, writes the ones you keep to adze, refreshes the project's Pulse doc in place, and appends a dated entry to its Session Progress Log. |
-| `/adze-bonch:status` | Read-only snapshot: the Pulse first, then task counts, blockers, open questions, and recent docs. Never writes. |
+| `/adze-bonch:main` | Front door. Loads discipline, resolves the project, reads its Pulse, routes intent. |
+| `/adze-bonch:tackle` | Runs an adze task end to end: research, plan, branch, tests, code, review, repro, fix, re-prove, regression tests, commit. Never writes code itself. |
+| `/adze-bonch:status` | Read-only snapshot of a project. Never writes. |
+| `/adze-bonch:save` | Audits recent turns, surfaces unpersisted decisions, writes the ones you keep, and refreshes the Pulse. |
+| `/adze-bonch:setup` | First-time wizard. Bootstraps reference docs into adze, creates your profile, offers optional hooks. Idempotent. |
 
-Both resolve the project from an explicit id or title fragment, then a full-text match on the cwd basename, then a pick-list.
+## Install
 
-## Agent
+```
+/plugin marketplace add ironmoose/adze-bonch
+/plugin install adze-bonch@ironmoose-marketplace
+```
 
-`pulse-writer` (haiku, read-only) drafts the Pulse for `/adze-bonch:save`: one paragraph on where work left off, one next move, an optional open question, about 25 lines max. Anything that does not fit comes back as an overflow list that save offers to file as tasks.
+Then run `/adze-bonch:setup` once.
 
-## Skills
+### Prerequisite: a running adze MCP server
 
-- `subagent-edit-verification`: check what an editing sub-agent actually changed before trusting its report.
-- `interview-prep-sheet-rehearsal-audit`.
-
-## Prerequisite: a running adze MCP server
-
-Clone [`4lt7ab/adze`](https://github.com/4lt7ab/adze) and add its server to `~/.claude.json`:
+Everything depends on adze. Clone [`4lt7ab/adze`](https://github.com/4lt7ab/adze) and add its server to `~/.claude.json`, pointing `--project` at wherever you cloned it:
 
 ```json
 "mcpServers": {
@@ -35,4 +46,29 @@ Clone [`4lt7ab/adze`](https://github.com/4lt7ab/adze) and add its server to `~/.
 }
 ```
 
-`/adze-bonch:save` prefers `documents_append` for the session log and falls back to a full-body `documents_update` on older servers.
+With no reachable server, setup stops at step one.
+
+### Prerequisite: the prove-it plugin
+
+`/adze-bonch:tackle`'s quality gate is not self-contained: its reviewers and its repro-verifier are `prove-it:*` agents, so the gate cannot run at all until the **prove-it** plugin is installed alongside adze-bonch. Install it the same way you installed this plugin, then optionally run `/prove-it:setup` for its enforcement hook.
+
+## Agents
+
+adze-bonch ships five agents: `scrum-master` routes the workflow, `researcher` reads the target repo before planning, `test-writer` and `implementer` are the only two that touch your code, and `pulse-writer` drafts the Pulse outside tackle. `/adze-bonch:tackle`'s quality gate dispatches ten read-only reviewers plus a repro-verifier that proves every finding by running code, all owned by the companion prove-it plugin, not this one. One card per adze-bonch agent, and a pointer to prove-it's reviewers, is in [`docs/agents-guide.md`](docs/agents-guide.md). The step-by-step lifecycle is in [`docs/how-it-works.md`](docs/how-it-works.md) section 3.
+
+## What it will NOT do
+
+- **No isolated copy of your repo.** Every step works in your real working tree on your real branch, so a run that goes wrong leaves partial edits behind. It shows you the diff and restores file by file; it never reaches for `git reset --hard` or `git clean`.
+- **It never pushes, and it does not review pull requests.** Commit is the last thing it does; pushing is yours, and a standalone review pass is `/prove-it:review` when you want one.
+- **Enforcement is opt-in and fails open.** The edit-blocking hook ships with the companion prove-it plugin, is installed only if you opt in, sees only the main session's own edits, and lets edits through on any error. The verification steps are mandatory regardless; the hook is not a sandbox.
+- **Several flows are not built.** brainstorm, refine, and verify are named in the routing table but not shipped; create adze projects directly for now.
+
+The full list, with the reasoning behind each, is in [`docs/how-it-works.md`](docs/how-it-works.md) section 5.
+
+## How it fits together
+
+Every command loads a shared discipline document from adze, so the same rules apply across projects and survive from one session to the next. Settings can be overridden per project and per user. The mechanics, including the named protocols agents use to flag plan, scope, and verification issues, are covered in [`docs/how-it-works.md`](docs/how-it-works.md).
+
+## Credits
+
+Built on [adze](https://github.com/4lt7ab/adze) by [@4lt7ab](https://github.com/4lt7ab).

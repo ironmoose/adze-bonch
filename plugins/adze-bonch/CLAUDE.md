@@ -1,19 +1,140 @@
 # adze-bonch: plugin development context
 
-For developing the plugin itself; it does not affect installed users.
+This file is loaded by Claude Code on session start in `~/workspaces/marketplace/plugins/adze-bonch/`. It is for *developing the plugin itself*. It does not affect end users of the installed plugin (D12 covers that via the wizard's CLAUDE.md trampolines).
 
-## What this plugin is
+## What this plugin is (one paragraph)
 
-Since 0.8.0, two commands and one agent: `/adze-bonch:save` (decision capture, Pulse refresh, Session Progress Log append), `/adze-bonch:status` (read-only snapshot), and `agents/pulse-writer.md`. The orchestration (main, tackle, setup, scrum-master, researcher, implementer, test-writer, discipline seeds, conventions overlays, voice templates, Codex adapters) was retired. It lives in git history at `17544f8` (0.7.1). Do not reintroduce a mandatory entry command, discipline-doc load, or review gate.
+`adze-bonch` is a Claude Code plugin that adds workflow discipline to projects tracked in [adze](https://github.com/4lt7ab/adze). Ships a setup wizard, a discipline loader, a project router, a status snapshot, a synchronous decision-capture command (`/adze-bonch:save`), a Project Pulse session-resume trailhead (loaded by main/status, written by /adze-bonch:save), and a full tackle lifecycle orchestrator (`/adze-bonch:tackle`) with 5 specialized agents and TypeScript/Python conventions overlays; the tackle quality gate is provided by the companion prove-it plugin. v0.7.1. brainstorm, refine, and verify remain future work.
 
-## Hard rules
+## Where things live (load-bearing pointers)
 
-1. **Edit this source tree only.** Never edit `~/.claude/plugins/cache/`. Bump `version` in both `.claude-plugin/plugin.json` and the root `.claude-plugin/marketplace.json` on every change, or installs never update.
-2. **No em-dashes in prose.** Use commas, semicolons, parentheses, or periods.
-3. **Tags only attach to documents in adze.** Projects and tasks cannot be tagged.
-4. **`documents_update` and `projects_update` replace the whole `context`.** Re-read before writing if the last read is over 60s old. For the append-only Session Progress Log use `documents_append`.
-5. **Pulse lookup:** `tags_list(q="kind:pulse")`, `documents_list(tag_id)`, cross-checked with `documents_for_project`. One pulse per project; halt if there are two.
+| Thing | Location |
+|-------|----------|
+| Plugin source-of-truth | `~/workspaces/marketplace/plugins/adze-bonch/` (this directory) |
+| Standards model (read, do not bake: project rules only) | `reference/conventions.md` |
+| Language conventions overlays | `reference/typescript-conventions.md`, `reference/python-conventions.md` |
+| Skills | `skills/<name>/SKILL.md` |
+| Deployed cache (do NOT edit) | `~/.claude/plugins/cache/ironmoose-marketplace/adze-bonch/<version>/` |
+| Marketplace remote | `git@github.com:ironmoose/adze-bonch.git` |
+| Adze repo (maintainer: Jacob @4lt7ab) | `~/workspaces/adze` |
+| Design Decisions Log (D1..D18) | adze doc `01KR883C2A54R2MNX720MF34DN` |
+| Meta-project ("Adze Workflow") | adze project `01KR7FQQCM37MFDTDG9N8N4JHR` |
+| Dogfooding findings (2026-05-10) | adze doc `01KRAFJK0H7TV1AQARH8SNCWYT` |
+| Parked: C-path upstream pitch | adze doc `01KRANRSBMCPZHQ31K2VQ78KTW` |
+| Parked: hybrid encoding (v0.2.0+) | adze doc `01KRANSF16K4VHFTMB5ZPNDN1G` |
 
-## Commit style
+## Hard rules for this plugin's source
 
-Imperative, prefixed: `adze-bonch: <what>`.
+1. **Edit `~/workspaces/marketplace/plugins/adze-bonch/` only.** Never edit the deployed cache under `~/.claude/plugins/cache/`. After source edits, `git push`, then `claude plugin marketplace update ironmoose-marketplace` to refresh deploys.
+2. **No em-dashes in new prose.** Parker considers them an AI tell. Use commas, semicolons, parentheses, or simple periods.
+3. **Adze upstream commits use the captain's-log voice.** "I [verb] ..." with nautical imagery; Jacob's house style. Plugin-internal commits use conventional plain English.
+4. **Tags only attach to documents in adze.** Projects and tasks cannot be tagged. Do not write code that depends on `projects_add_tag` or `tasks_add_tag` (they do not exist). See D16, D17 for the full implications.
+5. **Adze MCP `documents_update` and `projects_update` fully replace `context`.** No patching, no merging. Always re-read before writing if the last read is >60s old (D4 concurrency rule). EXCEPTION for append-only content (the Session Progress Log): prefer `documents_append({ id, text })`, which concatenates server-side and returns a lean summary instead of the whole body. It requires an adze-mcp new enough to expose the tool, so `/adze-bonch:save` Step 4 falls back to a full-body `documents_update` when it is absent.
+
+## Setup wizard shape (per D14 + D17)
+
+The setup wizard is the **7-step flow locked in D14** (D17 dropped the original Step 5; SessionStart hook added in v0.2.0), plus an optional **Step 6.5** (quality-gate enforcement hook) added after D17:
+
+1. Welcome + pre-flight (probe adze MCP)
+2. Bootstrap infrastructure (creates "adze-bonch reference" + "adze-bonch user profiles" projects, seeds canonical docs, writes the bootstrap-state doc)
+3. Create user profile
+4. Voice (OPTIONAL)
+5. Discoverability (OPTIONAL, installs CLAUDE.md trampolines at SAFE paths only, never `~/.claude/`)
+6. SessionStart hook (OPTIONAL, surfaces a session-start reminder to load adze-bonch via `/adze-bonch:main`)
+6.5. Quality-gate enforcement hook (OPTIONAL, added after D17)
+7. Quickstart
+
+**D17 Option D dropped from v0.1.0:** typed `shape:` / `repo:` / `kind:` metadata. The agent infers project shape and task kind from title + context. Active-project lookup uses FTS on cwd basename plus an ask-user fallback. Still unrevived as of v0.7.1; a future version may revive them via the parked research docs.
+
+## Tackle lifecycle and agents
+
+`/adze-bonch:tackle` is the task lifecycle orchestrator. `commands/tackle.md` is the authoritative step list; this is the summary.
+
+- **Step 0** Load discipline, resolve the task, open or append the `kind:task-log` doc.
+- **Step 0.5** Scrum-master routes: workflow type plus the `Documentation` and `TDD` flags.
+- **Step 1** Researcher builds context (reads target repo and target CLAUDE.md, grounds third-party library and vendor facts via context7).
+- **Step 2** Plan: interactive, one decision per turn, recommendations grounded before they are shown. Derives a task-level "Done when:" condition. Persisted as a `kind:plan` adze document.
+- **Step 3** Branch creation.
+- **Step 3.5** Test-writer writes FAILING tests first. TDD is the default (`TDD: yes`); only docs-only, dependency bumps, and pure config run implement-first.
+- **Step 4a** Implementer executes plan steps, taking the failing tests green. It is the only agent that writes implementation code, at 4a and again at 4d.
+- **Step 4b** Tests. Under TDD this is verification only; in non-TDD mode the test-writer runs here.
+- **Step 4c** Parallel quality gate (10 reviewers on standard), dispatched as `prove-it:*` agents from the companion prove-it plugin: prove-it:code-reviewer, prove-it:acceptance-qa, prove-it:edge-case-qa, prove-it:code-smells-reviewer, prove-it:test-reviewer, prove-it:self-containment-reviewer, prove-it:comment-claim-verifier, prove-it:contract-reviewer, prove-it:security-reviewer, prove-it:doc-vouching-reviewer. The diff is captured against a base SHA resolved from the REMOTE ref (`merge-base origin/<base-ref> HEAD`); a bare local base ref silently feeds reviewers a superset of the change. Never consolidate until every dispatched reviewer returned a real result.
+- **Step 4c.5** `prove-it:repro-verifier` proves or refutes the gate's findings by running reproduction scripts in a scratch dir, and runs the target repo's own verification. MANDATORY on every workflow, no skip conditions. Returns Confirmed / Proven-safe / Inconclusive per finding.
+- **Step 4d** Fix findings. Confirmed ones get fixed; Proven-safe false positives are dropped, not chased.
+- **Step 4d.5** Confirm-fix. `prove-it:repro-verifier` re-runs each Confirmed finding's OWN repro against the fixed code, and it must now PASS. MANDATORY on every workflow, no skip conditions. The repo's own test suite going green is not sufficient: those tests did not catch the defect in the first place, which is why the repro exists. A fix whose repro still fails is not a fix and goes back to 4d, and a finding whose repro was never re-run does not reach the commit gate. Added after a 2026-08-25 failure where a Confirmed finding was "fixed" by moving a call site and adding a comment, the repro was never re-run, the green suite and a reviewer both passed it, and the defect survived.
+- **Step 4e** Promote regression tests. For every Confirmed-and-fixed finding, the test-writer (promote mode) translates its repro into a permanent regression test in the target repo, or explicitly declines with a reason. MANDATORY decision on every workflow, no skip conditions on making the call.
+- **Step 5** Commit gate, which checks the Step 2 Done-condition.
+- **Step 6** PR handoff for review.
+
+**Fix-cycle budget:** max 3 per failure, plus a soft cross-loop total of roughly 8 across Steps 4a, 4b, and 4d. Past that, stop and reassess with the user.
+
+**Standards model** (`reference/conventions.md` is canonical): each working agent reads the TARGET repo's own `CLAUDE.md` to enforce its conventions, and read-only reviewers receive those conventions injected by the orchestrator. No baked *project* ruleset lives in this plugin. A baked *language* baseline does: `reference/typescript-conventions.md` and `reference/python-conventions.md`, the conventions overlays, are injected into the eight language-sensitive agents' spawn prompts. The target repo's `CLAUDE.md` stays authoritative and wins; the overlay is the baseline underneath it; general good practice fills what both leave silent. The detection rule that picks an overlay lives once in `seeds/workflow.md`.
+
+**Adze state:** tackle persists all intermediate state bound to the task by `task_id`:
+- `kind:research`: researcher findings.
+- `kind:plan`: the approved plan.
+- `kind:task-log`: progress, fix-cycle outcomes, and the commit gate verdict.
+
+### Agent roster (5 adze-bonch agents)
+
+`Overlay` marks the language-sensitive agents that get a conventions overlay injected into their spawn prompt.
+
+| File | Role | Overlay |
+|------|------|---------|
+| `agents/scrum-master.md` | Routes tasks; recommends workflow path. | no |
+| `agents/researcher.md` | Explores target repo; builds context before planning. | no |
+| `agents/implementer.md` | Disciplined plan executor; audits its own diff. Sole writer of implementation code (4a and 4d). | yes |
+| `agents/test-writer.md` | Writes and updates test coverage. | yes |
+| `agents/pulse-writer.md` | Drafts the Project Pulse for `/adze-bonch:save`, outside the tackle pipeline. | no |
+
+The Step 4c quality gate and the Step 4c.5/4d.5 repro-verifier are not adze-bonch agents; they are dispatched as `prove-it:*` agents from the required companion prove-it plugin: `prove-it:code-reviewer`, `prove-it:acceptance-qa`, `prove-it:edge-case-qa`, `prove-it:code-smells-reviewer`, `prove-it:test-reviewer`, `prove-it:self-containment-reviewer`, `prove-it:comment-claim-verifier`, `prove-it:contract-reviewer`, `prove-it:security-reviewer`, `prove-it:doc-vouching-reviewer` (10 reviewers on standard), plus `prove-it:repro-verifier`, which runs repro scripts in a durable scratch dir via `prove-it-gate repro-dir`. Six of the ten reviewers (code-reviewer, edge-case-qa, code-smells-reviewer, test-reviewer, contract-reviewer, security-reviewer) take a conventions overlay, which combined with adze-bonch's implementer and test-writer makes the eight language-sensitive agents referenced above.
+
+The `developer` agent was retired in v0.4.0. Do not reintroduce a second implementation-writing agent; the implementer covers both the implement step and the fix step.
+
+## Lookup chain (D6): for any workflow setting
+
+```
+session override -> project workflow_overrides (in project.context) -> user profile doc -> canonical default (seed)
+```
+
+First hit wins. Cache for the duration of the turn.
+
+## State oracle (D16)
+
+`/adze-bonch:setup` detects install state via:
+
+1. `tags_list(q="kind:bootstrap-state")` to resolve the tag id (create it if missing).
+2. `documents_list(tag_id=..., limit=1)` to find prior installs.
+3. If found, read YAML frontmatter for `adze_workflow_plugin_project_id` and `user_profiles_project_id`, then `projects_get` to verify each.
+4. Branch on `plugin_version` for fresh / current / upgrade / newer-than-plugin.
+
+Do NOT use `search` or project-tag filters for state detection. Project tags do not exist in adze (see hard rule 4).
+
+## Five baseline conventions (loaded from `seeds/discipline.md`)
+
+1. **Synchronous decision persistence:** write to adze before the next response. Don't batch.
+2. **Supersede pattern:** never delete history; prepend a SUPERSEDED notice and rename the title.
+3. **Authoritative-doc convention:** versioned title, dated header, TL;DR, Open Questions, Decisions Locked.
+4. **Memory vs adze split:** user-level facts go to memory; project content goes to adze.
+5. **Project context updates aren't optional:** when a project pivots, `projects.context` changes, not just docs.
+
+Plus four named protocols: `[GOVERNANCE]`, `[PLAN-TEST-CONFLICT]`, `[SCOPE-EXPANSION]`, `[UNVERIFIED]` (see `seeds/named-protocols.md`).
+
+## Adze MCP tools, fast reference
+
+Reads: `projects_list`, `projects_get`, `projects_brief`, `tasks_list`, `tasks_get`, `documents_list`, `documents_get`, `documents_for_project`, `search`, `tags_list`.
+
+Writes: `projects_create`, `projects_update`, `tasks_create`, `tasks_create_many`, `tasks_update`, `documents_create`, `documents_update`, `documents_append`, `documents_attach`, `documents_add_tag`, `tags_create`.
+
+## On session start in this directory
+
+1. `mcp__adze__projects_get(01KR7FQQCM37MFDTDG9N8N4JHR)` to load the meta-project context.
+2. `mcp__adze__tasks_list(project_id=01KR7FQQCM37MFDTDG9N8N4JHR, status=["todo","doing","blocked"])` to see open work.
+3. `mcp__adze__documents_get(01KR883C2A54R2MNX720MF34DN)` to load the design log if you'll be making design decisions.
+
+Skip step 3 for pure file edits or trivial tweaks.
+
+## Commit message style
+
+- **Plugin-internal commits** (this repo): imperative present, conventional commits style. Example: `adze-bonch: drop Step 5 per D17`.
+- **Upstream adze commits** (when contributing to `4lt7ab/adze`): captain's-log voice. Example: `I splice a group_key into tasks, run the line through every hatch, and tab the ledger.` Match Jacob's existing log.
