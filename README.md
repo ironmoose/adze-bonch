@@ -1,6 +1,17 @@
 # adze-bonch
 
-A Claude Code plugin that keeps projects tracked in [adze](https://github.com/4lt7ab/adze) disciplined: decisions are written to adze as they happen, each project keeps a one-document resume trail, and tasks run through a review gate whose findings are proven by reproduction before they get fixed.
+A Claude Code (and Codex) plugin for projects tracked in [adze](https://github.com/4lt7ab/adze). It keeps adze in step with the work: decisions are written as they land, each project has a short resume note (the Pulse), and tasks move from todo to done as you finish them.
+
+0.8.0 is a lean rework. The old pipeline (a mandatory router, a routing agent, research/implement/test agents, a ten-lane review gate on every change, a setup wizard, seeded discipline docs) is gone. The commands now do the work in the main conversation and hand test-first work, bug diagnosis, and review to [mattpocock-skills](https://github.com/mattpocock/skills). The full repro-verified review is still there, opt-in, through [prove-it](https://github.com/ironmoose/prove-it).
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/adze-bonch:save` | Finds decisions in recent turns, writes the ones you keep to adze, refreshes the project's Pulse, appends the session log. |
+| `/adze-bonch:status` | Read-only snapshot, Pulse first. |
+| `/adze-bonch:main` | Resume a project: show its Pulse and task counts, route to the others. |
+| `/adze-bonch:tackle` | Work one adze task: mark it doing, build it, run the repo's checks, review if big or risky, commit, mark it done, save. `--prove` adds `/prove-it:review`. |
 
 ## Install
 
@@ -9,7 +20,7 @@ A Claude Code plugin that keeps projects tracked in [adze](https://github.com/4l
 /plugin install adze-bonch@ironmoose-marketplace
 ```
 
-adze-bonch needs a running [adze](https://github.com/4lt7ab/adze) MCP server; the [plugin overview](plugins/adze-bonch/README.md) has the server config. Then run `/adze-bonch:setup` once.
+Needs a running adze MCP server; the [plugin overview](plugins/adze-bonch/README.md) has the config. `tackle` works best with mattpocock-skills installed; `--prove` needs prove-it. Codex setup is in [plugins/adze-bonch/codex/README.md](plugins/adze-bonch/codex/README.md).
 
 ## Update
 
@@ -17,16 +28,6 @@ adze-bonch needs a running [adze](https://github.com/4lt7ab/adze) MCP server; th
 /plugin marketplace update ironmoose-marketplace
 /plugin update adze-bonch@ironmoose-marketplace
 ```
-
-## Documentation
-
-Everything is linked here, so you do not have to click through a chain of READMEs.
-
-- **[How it works](plugins/adze-bonch/docs/how-it-works.md)** is the place to start: what the plugin does and what happens at each phase of a task, from loading it through workflow choice, research, planning, tests-first, implementation, the reviewer group, reproduction, fixes, re-proving the fix, regression tests, and the commit check.
-- **[Agents guide](plugins/adze-bonch/docs/agents-guide.md)**: one card per agent, including what each one is blind to.
-- **[Plugin overview](plugins/adze-bonch/README.md)**: the five commands, setup, and the adze prerequisite on one page.
-- **[Quality gate CLI](plugins/adze-bonch/gate/README.md)**: the optional enforcement tool that blocks edits while a finding is still unverified.
-- **Conventions the agents work under**: [TypeScript](plugins/adze-bonch/reference/typescript-conventions.md), [Python](plugins/adze-bonch/reference/python-conventions.md), and [prose / no-AI-slop](plugins/adze-bonch/reference/no-ai-slop.md).
 
 ## Credits
 

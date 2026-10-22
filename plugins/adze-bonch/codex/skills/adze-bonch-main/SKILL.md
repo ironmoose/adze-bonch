@@ -1,12 +1,10 @@
 ---
 name: adze-bonch-main
-description: Resume or route work for an adze-tracked project using its canonical discipline and Project Pulse. Use when the user names an adze project, asks where work left off, invokes adze-bonch broadly, or wants to choose between status, save, and tackle.
+description: Resume an adze-tracked project from its Project Pulse and route to status, save, or tackle. Use when the user names an adze project, asks where work left off, or invokes adze-bonch broadly.
 ---
 
 # adze-bonch main
 
-Read [the Codex runtime](../../runtime.md), then read and follow the canonical
-workflow at [commands/main.md](../../../commands/main.md). Load only the canonical
-seed or template documents that workflow calls for. Do not silently start
-implementation after showing the Pulse and next move; route only when the user's
-intent calls for the next workflow.
+Read [the Codex runtime](../../runtime.md), then read and follow
+[commands/main.md](../../../commands/main.md). Do not start work after showing the
+Pulse; route only when the user's intent calls for it.

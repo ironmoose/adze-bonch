@@ -1,125 +1,34 @@
 ---
 name: main
-description: "Unified adze project orchestrator. Loads discipline from adze, detects intent, routes to the right sub-flow. Use /adze-bonch:main for status, save, and tackle."
+description: "Front door for an adze project: resolves the project, shows its Pulse and task counts, and routes to save, status, or tackle. Optional; nothing requires it."
 ---
 
-# adze-bonch -- Project Orchestrator
+# adze-bonch -- Main
 
-You are an adze-first project orchestrator. You NEVER write code directly. You load the canonical discipline doc from adze, resolve effective settings via the lookup chain, detect intent, and route to the right sub-flow.
+Resume an adze project and route. Optional: `save`, `status`, and `tackle` each resolve the project on their own.
 
-## Step 0: Load Discipline (every invocation)
+## Step 1: Resolve the project
 
-Load the canonical discipline doc from adze before doing anything else.
+First hit wins; cache the id for the session.
 
-1. If a bootstrap-state doc id is known (set by `/adze-bonch:setup`), prefer:
-   ```
-   mcp__adze__documents_get({ id: <bootstrap-state-id> })
-   ```
-   `canonical_seeds` is a LIST of `{file, document_id, seed_hash}` entries, not a map. Find the entry whose `file` is `discipline.md`, read its `document_id`, then fetch that doc.
-2. Otherwise fall back to search:
-   ```
-   mcp__adze__search({ q: "discipline", kinds: ["document"], limit: 5 })
-   ```
-   Match the doc tagged `kind:reference` + `provenance:canonical` whose title contains "discipline".
+1. A project id, slug, or title fragment the user passed: `mcp__adze__projects_get` or `mcp__adze__projects_list({ q })`.
+2. The cwd basename: `mcp__adze__projects_list({ q: <basename> })`, single hit only.
+3. Ask the user to pick from a short list of active projects.
 
-If the discipline doc cannot be loaded, halt and tell the user to run `/adze-bonch:setup`.
+No match: if the user described a new idea, offer `mcp__adze__projects_create`; otherwise ask which project they mean and stop.
 
-## Step 1: Early Exit Routes
+## Step 2: Show where things stand
 
-Some intents do not need project context. Check these FIRST:
+1. `mcp__adze__projects_get({ id })` and `mcp__adze__tasks_list({ project_id })`.
+2. Load the Pulse: `tags_list({ q: "kind:pulse" })`, `documents_list({ tag_id })`, cross-checked with `documents_for_project({ project_id })`; then `documents_get`. More than one pulse on the project: halt and ask which is authoritative.
+3. Print the Pulse (Where we left off, Next move, Open for user), then one line of task counts (todo / doing / done / blocked) and any stale `doing` tasks. No pulse: say "no pulse yet; /adze-bonch:save creates one."
 
-- **"listen"** → `Skill("listen")` immediately. Skip all other steps.
+## Step 3: Route
 
-## Step 2: Load Adze Context
+| Intent | Route |
+|---|---|
+| save, checkpoint, persist | `/adze-bonch:save` |
+| status, where are we, bare `/adze-bonch:main` | stop after Step 2 and ask what's next |
+| tackle X, work on X, implement, fix | `/adze-bonch:tackle` with the user's message |
 
-Resolve the active project via this lookup chain (first hit wins). There is no `repo:` tag to look up, because adze projects can't be tagged; we use FTS over the cwd basename instead.
-
-1. **Session-cached project id.** If a prior `/adze-bonch:*` invocation in this session resolved a project, reuse that id.
-2. **Explicit user arg.** If the user passed a project id, slug, or title fragment, resolve it via `mcp__adze__projects_list({ q: <arg> })` or `mcp__adze__projects_get` for a literal id.
-3. **FTS over cwd basename.** Compute the basename of the current working directory (e.g. `/home/x/workspaces/foo` -> `foo`). Call `mcp__adze__projects_list({ q: <basename> })`. If exactly one hit, use it.
-4. **Ask the user.** Present a short pick-list (active projects, capped) and prompt. Cache the chosen id for the session.
-
-**If no match found:**
-- User described an idea → ask whether to start a new project. If yes, help them create the project directly with `mcp__adze__projects_create`; a dedicated brainstorm flow is planned but not yet available.
-- No idea described → ask which project they mean. Stop.
-
-**If matched:**
-- `mcp__adze__projects_get({ id })` -- load goal, context, status
-- `mcp__adze__tasks_list({ project_id, status: "doing" })` -- note any stale `doing` tasks (do NOT auto-reset; surface to user in Step 3)
-- `mcp__adze__tasks_list({ project_id })` -- task counts grouped by `kind:` tag
-- Do NOT load attached docs here -- sub-flows load what they need.
-
-## Step 2.5: Load the Project Pulse
-
-Per D18, the Project Pulse is the resume trailhead: the FIRST thing you load when entering a project. It is a resume trailhead, NOT a full status report. Load it using the standard lookup:
-
-1. Resolve the pulse tag: `mcp__adze__tags_list({ q: "kind:pulse" })` -> tag id.
-2. Find candidates: `mcp__adze__documents_list({ tag_id })`.
-3. Cross-check attachment: `mcp__adze__documents_for_project({ project_id })`. The pulse is the doc present in BOTH sets.
-4. Read its body: `mcp__adze__documents_get({ id })`.
-
-**One-per-project rule:** a project has AT MOST ONE doc tagged `kind:pulse` + `provenance:user`. If more than one pulse attaches to this project, HALT and ask which is authoritative before proceeding.
-
-If no pulse exists, note "no pulse yet; /adze-bonch:save will create one" and continue. Keep the pulse body handy for Step 4.
-
-**Load-time budget guard (D18 anti-bloat):** after loading the pulse, eyeball it against the budget. If it exceeds 25 lines, or is clearly carrying a backlog, multiple threads, or accumulated history, surface a one-line warning: "Pulse is over budget; run /adze-bonch:save to re-trim it and file the overflow as tasks." This is read-only; do not rewrite the pulse here.
-
-## Step 3: Resolve Effective Settings (lookup chain)
-
-Per D6, resolve settings in this order; first hit wins:
-
-1. **Session override** -- anything in the user's current message (`voice=lax`, `--voice captain-log`, etc.)
-2. **Project workflow_overrides** -- read `project.context`, look for a fenced code block tagged `workflow_overrides` (YAML)
-3. **User profile** -- `mcp__adze__search({ q: "user-profile", kinds: ["document"] })` filter by tag `user-profile:{$USER}`. Read YAML frontmatter.
-4. **Canonical defaults** -- from the discipline doc + `voice-default` template
-
-Cache the resolved settings for this turn so sub-flows can read them.
-
-## Step 4: Show Status
-
-Lead with the Project Pulse (loaded in Step 2.5) as the PRIMARY view, BEFORE the task counts:
-- **Where we left off** -- the pulse's paragraph (verbatim or lightly trimmed)
-- **Next move** -- the pulse's one concrete next action
-- **Open for user** -- only if the pulse carries this section
-
-If no pulse exists, say "no pulse yet; /adze-bonch:save will create one," then continue with the summary below.
-
-Then present a brief summary:
-- Project title and one-line goal
-- Tasks: `{done}` done, `{doing}` active, `{todo}` remaining (grouped by `kind:` if 3+ kinds present)
-- Stale `doing` tasks (if any) -- present them, ask user: leave / reset to todo / mark done
-- Recent decisions (last 3 docs by `created_at`, titles only)
-- Open questions count (tasks with `group_key:open-questions`)
-- What's next (first todo task, or user's stated intent)
-
-## Step 5: Detect Intent and Route
-
-Parse the user's message to determine the workflow:
-
-| Intent | Route to |
-|--------|----------|
-| "save", "save our work", "persist", "checkpoint" | `/adze-bonch:save` |
-| "status", "where are we", just `/adze-bonch:main` | Show status from Step 4, ask what they want to do |
-| "tackle X", "work on X", "implement" | `/adze-bonch:tackle` (pass user's message as args) |
-| "brainstorm", "new idea" | brainstorm flow (not available yet) |
-| "refine", "groom", "review tasks" | refine flow (not available yet) |
-| "listen" | `Skill("listen")` |
-
-When routing, pass the user's original message as args to the sub-flow.
-
-## Hard Rules
-
-- **NEVER write code** -- always dispatch to sub-skills or sub-agents.
-- **NEVER skip discipline load** (Step 0) -- it is the load-bearing rule per D11.
-- **Synchronous decision persistence** -- when a decision lands in conversation, write to adze before the next response. This is Rule 1 of the discipline doc; it applies to YOU, not just sub-agents.
-- **Supersede, never delete** -- stale docs get a SUPERSEDED prefix, never `documents_delete`.
-- **Project context updates are not optional** -- when the project pivots, update `project.context` not just docs.
-- **Concurrency: strict for reference docs, lax for tasks** -- re-read reference docs before write if last read was >60s ago. Skip the re-read for task updates.
-- **No em-dashes** in any user-facing text.
-- **End-of-session: append to a "Session Progress Log" doc synchronously.** Never batch.
-
-## Style
-
-- Conversational, efficient. No filler openers ("Great question", "Let's dive in").
-- One question at a time when soliciting user input.
-- Show the result of each step, then move on.
+Do not start work on your own after showing the Pulse. No em dashes in output.

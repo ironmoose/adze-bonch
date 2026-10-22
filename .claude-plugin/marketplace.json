@@ -1,16 +1,18 @@
 {
   "name": "ironmoose-marketplace",
-  "owner": { "name": "Paul Parker" },
+  "owner": {
+    "name": "ironmoose"
+  },
   "metadata": {
-    "description": "Home of the adze-bonch plugin: workflow discipline for adze projects.",
-    "version": "3.0.0"
+    "description": "Home of the adze-bonch plugin: a lean workflow for adze projects.",
+    "version": "4.0.0"
   },
   "plugins": [
     {
       "name": "adze-bonch",
       "source": "./plugins/adze-bonch",
-      "description": "Workflow discipline for adze projects: synchronous decision persistence, the Project Pulse session-resume trailhead, voice profiles, project overrides, named protocols, and a full tackle lifecycle (12 specialized agents, TypeScript/Python conventions overlays, parallel quality gate, repro-verified findings, adze state persistence).",
-      "version": "0.7.1"
+      "description": "Lean adze workflow: decision capture, the Project Pulse resume note, a read-only status snapshot, and a tackle command that works adze tasks in the main context with an opt-in prove-it review.",
+      "version": "0.8.0"
     }
   ]
 }
