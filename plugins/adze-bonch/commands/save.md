@@ -1,21 +1,28 @@
 ---
 name: save
-description: "Synchronous decision capture. Audits the last N conversation turns, surfaces unpersisted decisions, asks which to capture, dispatches the writes immediately. The 'save our work' hammer per discipline Rule 1."
+description: "Synchronous decision capture. Audits the last N conversation turns, surfaces unpersisted decisions, asks which to capture, dispatches the writes immediately. The 'save our work' hammer."
 ---
 
 # adze-bonch -- Save
 
-The "save our work" hammer. Per discipline Rule 1 (synchronous decision persistence), conversation context evaporates and adze persists. This command audits recent turns, surfaces decisions that should be captured, asks the user which ones to write, and dispatches the writes IMMEDIATELY.
+The "save our work" hammer. Conversation context evaporates and adze persists, so decisions are written as soon as they land, not batched at session end. This command audits recent turns, surfaces decisions that should be captured, asks the user which ones to write, and dispatches the writes IMMEDIATELY.
 
-## Step 0: Load Discipline + Project
+## Step 0: Resolve Project
 
-Same as `/adze-bonch:main` Steps 0-2. Resolve the active project. Resolving project state now includes the Project Pulse (D18): the save flow updates it in Step 3.5, so keep the active project id handy.
+Resolve the active adze project directly (first hit wins). There is no discipline doc to load; the rules this command needs are written inline below.
 
-If no project resolves, print "Save needs a project. Pass a project id, run from a tagged repo, or invoke /adze-bonch:main first." Stop.
+1. **Session-cached project id.** If a prior `/adze-bonch:*` call this session resolved a project, reuse it.
+2. **Explicit user arg.** A project id via `mcp__adze__projects_get`, or a slug or title fragment via `mcp__adze__projects_list({ q: <arg> })`.
+3. **FTS over the cwd basename** via `mcp__adze__projects_list({ q: <basename> })`. Single hit only.
+4. **Ask the user** to pick from a short list of active projects. Cache the answer for the session.
+
+Then `mcp__adze__projects_get({ id })` for the project title and context. Keep the id handy; Step 3.5 updates the project's Pulse.
+
+If no project resolves, print "Save needs a project. Pass a project id or a title fragment." Stop.
 
 ## Step 1: Audit Conversation Context
 
-Walk back through the last 10-20 turns of conversation. Categorize each candidate against Rule 1's trigger list:
+Walk back through the last 10-20 turns of conversation. Categorize each candidate against this trigger list:
 
 **Triggers (write happens):**
 - Direction pivot ("we're going X instead of Y") → project context update + supersede conflicting docs
@@ -69,12 +76,12 @@ For each accepted item, in order:
 |------|--------|
 | `project_context_update` | `mcp__adze__projects_update({ id, context: <merged> })` |
 | `new_doc` | `mcp__adze__documents_create(...)` then `mcp__adze__documents_attach({ project_id, document_id })` |
-| `supersede` | (1) Read existing doc. (2) Prepend SUPERSEDED notice block per Rule 2. (3) Rename title to `[SUPERSEDED <YYYY-MM-DD>] <Original>`. (4) `mcp__adze__documents_update`. (5) Create the new authoritative doc per Rule 3. |
+| `supersede` | (1) Read existing doc. (2) Prepend a SUPERSEDED notice block naming the replacement and date. (3) Rename title to `[SUPERSEDED <YYYY-MM-DD>] <Original>`. (4) `mcp__adze__documents_update`. (5) Create the new authoritative doc (dated header, TL;DR, Open Questions, Decisions Locked). |
 | `task_create` | `mcp__adze__tasks_create(...)` |
 | `task_update` | `mcp__adze__tasks_update(...)` |
 | `artifact_capture` | Write artifact to `~/workspaces/notes/<project-slug>-<artifact>-<YYYY-MM-DD>.{ext}`, then create an adze doc that links to it. |
 
-**Concurrency rule (D4):**
+**Concurrency rule** (adze `documents_update` and `projects_update` replace the whole body):
 - For docs tagged `concurrency:strict`: re-read with `documents_get` before writing IF last read was >60s ago. Skip re-read otherwise.
 - For tasks (default `concurrency:lax`): skip the re-read.
 
@@ -84,7 +91,7 @@ For each accepted item, in order:
 
 ## Step 3.5: Update the Project Pulse
 
-Per D18, every save refreshes the Project Pulse: a per-project resume trailhead, updated IN PLACE (never superseded; the pulse is transient). The pulse has a hard size budget (<=25 lines, about 1500 characters, one active thread, one next action). Anything that does not fit is filed as a task, not crammed into the pulse; that is why the `pulse-writer` returns an overflow list.
+Every save refreshes the Project Pulse: a per-project resume trailhead, updated IN PLACE (never superseded; the pulse is transient). The pulse has a hard size budget (<=25 lines, about 1500 characters, one active thread, one next action). Anything that does not fit is filed as a task, not crammed into the pulse; that is why the `pulse-writer` returns an overflow list.
 
 1. **Compile recent context.** Gather what just happened this session: the decisions captured in Step 3, active task IDs, relevant doc IDs, commit hashes, and file paths.
 2. **Load the existing pulse** via the standard lookup:
@@ -93,7 +100,7 @@ Per D18, every save refreshes the Project Pulse: a per-project resume trailhead,
    - `mcp__adze__documents_for_project({ project_id })` to cross-check attachment; the pulse is the doc present in BOTH sets.
    - `mcp__adze__documents_get({ id })` for its body.
    - **One-per-project rule:** if more than one `kind:pulse` doc attaches to this project, HALT and ask which is authoritative.
-3. **Dispatch the `pulse-writer` sub-agent** (model haiku, read-only). Pass it: the project title, the compiled context, the existing pulse body (if any), and the effective voice. It DRAFTS the 3 canonical sections (Where we left off / Next move / Open for user) and RETURNS them inside a machine-parseable envelope (`===PULSE===` / `===OVERFLOW===` / `===END===`); it does not write to adze itself.
+3. **Dispatch the `pulse-writer` sub-agent** (model haiku, read-only). Pass it: the project title, the compiled context, and the existing pulse body (if any). It DRAFTS the 3 canonical sections (Where we left off / Next move / Open for user) and RETURNS them inside a machine-parseable envelope (`===PULSE===` / `===OVERFLOW===` / `===END===`); it does not write to adze itself.
 4. **Parse the envelope.** Split the returned message on the `===PULSE===`, `===OVERFLOW===`, and `===END===` markers:
    - The text between `===PULSE===` and `===OVERFLOW===` is the **pulse body**.
    - The text between `===OVERFLOW===` and `===END===` is the **overflow list**: zero or more items the writer trimmed to keep the pulse within budget, or the literal `(none)`.
@@ -127,9 +134,9 @@ After all writes, append a dated entry to the project's ONE canonical "Session P
 ## Hard Rules
 
 - **Synchronous, always.** Never queue writes. Never batch into one giant doc dump at session end. The whole point of this command is to defeat that pattern.
-- **Supersede, never delete.** If you rejected an approach, the doc that prescribed it gets superseded per Rule 2. Never `documents_delete`.
-- **Project context updates aren't optional** (Rule 5). If a pivot landed, `projects_update` runs.
-- **Memory vs adze split** (Rule 4): user-level facts go to memory (don't write under `~/.claude/` during a work session; instead, surface them in `~/workspaces/notes/`). Project facts go to adze.
+- **Supersede, never delete.** If you rejected an approach, the doc that prescribed it gets superseded (SUPERSEDED notice plus renamed title). Never `documents_delete`.
+- **Project context updates aren't optional.** If a pivot landed, `projects_update` runs.
+- **Memory vs adze split:** user-level facts go to memory (don't write under `~/.claude/` during a work session; instead, surface them in `~/workspaces/notes/`). Project facts go to adze.
 - **No em-dashes** in any captured doc body or commit message.
 
 ## Style

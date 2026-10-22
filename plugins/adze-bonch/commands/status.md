@@ -9,14 +9,14 @@ Read-only snapshot of the active adze project. Cheap. Never writes.
 
 ## Step 0: Resolve Project
 
-Same lookup chain as `/adze-bonch:main` Step 2. There is no `repo:` tag; we FTS over the cwd basename instead. status.md is read-only, so any "ask the user" answer is cached for THIS invocation only, not for the session.
+There is no `repo:` tag; we FTS over the cwd basename instead. status.md is read-only, so any "ask the user" answer is cached for THIS invocation only, not for the session.
 
-1. Session-cached project id (if main has already resolved one this session).
+1. Session-cached project id (if a prior `/adze-bonch:*` call resolved one this session).
 2. Explicit user arg (project id, slug, or title fragment) via `mcp__adze__projects_list({ q: <arg> })`.
 3. FTS over the cwd basename via `mcp__adze__projects_list({ q: <basename> })`. Single hit only.
 4. Ask the user to pick from a short list of active projects.
 
-If no project resolves, print "No project resolved. Pass a project id or invoke /adze-bonch:main." Stop.
+If no project resolves, print "No project resolved. Pass a project id or a title fragment." Stop.
 
 ## Step 1: Fetch Brief
 
@@ -36,7 +36,7 @@ mcp__adze__documents_list({ project_id: id, limit: 10, sort: "created_at:desc" }
 
 ## Step 1.5: Load the Project Pulse
 
-Per D18, the Project Pulse is the primary view of this snapshot. Load it (read-only) via the standard lookup:
+The Project Pulse is the primary view of this snapshot. Load it (read-only) via the standard lookup:
 
 1. `mcp__adze__tags_list({ q: "kind:pulse" })` -> tag id.
 2. `mcp__adze__documents_list({ tag_id })` for candidates.
@@ -47,7 +47,7 @@ Per D18, the Project Pulse is the primary view of this snapshot. Load it (read-o
 
 If no pulse exists, note it in the output and suggest `/adze-bonch:save` to create one.
 
-**Load-time budget guard (D18 anti-bloat):** if the loaded pulse exceeds 25 lines, or clearly carries a backlog, multiple threads, or accumulated history, add a one-line warning to the output: "Pulse is over budget; run /adze-bonch:save to re-trim it and file the overflow as tasks." Read-only; status never rewrites the pulse.
+**Load-time budget guard (anti-bloat):** if the loaded pulse exceeds 25 lines, or clearly carries a backlog, multiple threads, or accumulated history, add a one-line warning to the output: "Pulse is over budget; run /adze-bonch:save to re-trim it and file the overflow as tasks." Read-only; status never rewrites the pulse.
 
 ## Step 2: Render Snapshot
 

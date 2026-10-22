@@ -1,9 +1,9 @@
 {
   "name": "adze-bonch",
-  "version": "0.7.1",
-  "description": "Workflow discipline for adze projects: setup wizard, synchronous decision persistence, the Project Pulse session-resume trailhead, voice profiles, project overrides, named protocols, and a full tackle lifecycle with 5 specialized agents, TypeScript/Python conventions overlays, and a quality gate provided by the companion prove-it plugin.",
+  "version": "0.8.0",
+  "description": "Retired orchestration, slimmed to two adze commands: /adze-bonch:save (decision capture, Project Pulse refresh, session log append) and /adze-bonch:status (read-only project snapshot).",
   "author": {
-    "name": "Parker (ironmoose)"
+    "name": "ironmoose"
   },
   "repository": "https://github.com/ironmoose/adze-bonch",
   "license": "MIT"
